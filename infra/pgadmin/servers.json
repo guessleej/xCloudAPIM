@@ -1,0 +1,14 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "xCloudAPIM PostgreSQL",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "apim",
+      "Username": "apim_user",
+      "SSLMode": "prefer",
+      "SavePassword": true
+    }
+  }
+}

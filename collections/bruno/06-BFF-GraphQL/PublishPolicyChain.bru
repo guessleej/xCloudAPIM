@@ -1,0 +1,59 @@
+meta {
+  name: GraphQL — Publish Policy Chain
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{bff_url}}/graphql
+  body: graphql
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+body:graphql {
+  mutation PublishPolicyChain($apiId: ID!, $input: PolicyChainInput!) {
+    publishPolicyChain(apiId: $apiId, input: $input) {
+      chainId
+      apiId
+      version
+      policies {
+        id
+        type
+        phase
+        enabled
+        order
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "apiId": "{{api_id}}",
+    "input": {
+      "policies": [
+        {
+          "id": "jwt-auth-1",
+          "type": "jwt_auth",
+          "phase": "PRE_REQUEST",
+          "enabled": true,
+          "order": 0,
+          "config": {}
+        }
+      ]
+    }
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("no GQL errors", function() {
+    expect(res.body.errors).to.be.undefined;
+  });
+}

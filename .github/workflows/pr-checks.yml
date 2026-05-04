@@ -1,0 +1,91 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents:      read
+
+# ═══════════════════════════════════════════════════════════════
+jobs:
+
+  # ─────────────────────────────────────────────────────────────
+  # Validate PR title follows Conventional Commits
+  # ─────────────────────────────────────────────────────────────
+  pr-title:
+    name: PR Title (Conventional Commits)
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate PR title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          # Pattern: type(scope): description
+          # Types: feat, fix, chore, docs, refactor, perf, test, ci, build, revert
+          PATTERN='^(feat|fix|chore|docs|refactor|perf|test|ci|build|revert)(\([a-z0-9/-]+\))?!?: .{3,}'
+          if ! echo "$PR_TITLE" | grep -qE "$PATTERN"; then
+            echo "❌ PR title does not follow Conventional Commits format"
+            echo "   Title: $PR_TITLE"
+            echo ""
+            echo "   Valid examples:"
+            echo "   - feat(gateway): add circuit breaker plugin"
+            echo "   - fix(auth): refresh token expiry calculation"
+            echo "   - chore: upgrade golang to 1.22.5"
+            exit 1
+          fi
+          echo "✅ PR title is valid: $PR_TITLE"
+
+  # ─────────────────────────────────────────────────────────────
+  # PR size check
+  # ─────────────────────────────────────────────────────────────
+  pr-size:
+    name: PR Size Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check PR size
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          ADDITIONS=$(git diff --shortstat "$BASE..$HEAD" | grep -oP '\d+(?= insertion)' || echo 0)
+          DELETIONS=$(git diff --shortstat "$BASE..$HEAD" | grep -oP '\d+(?= deletion)' || echo 0)
+          TOTAL=$((ADDITIONS + DELETIONS))
+
+          echo "PR size: +${ADDITIONS} -${DELETIONS} = ${TOTAL} lines"
+
+          if [ "$TOTAL" -gt 1500 ]; then
+            echo "⚠️  Warning: This PR is very large (${TOTAL} lines changed)."
+            echo "   Consider breaking it into smaller PRs for easier review."
+          elif [ "$TOTAL" -gt 800 ]; then
+            echo "⚠️  This PR is large (${TOTAL} lines). Review carefully."
+          else
+            echo "✅ PR size is manageable (${TOTAL} lines)"
+          fi
+
+  # ─────────────────────────────────────────────────────────────
+  # Branch naming convention
+  # ─────────────────────────────────────────────────────────────
+  branch-name:
+    name: Branch Name Check
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate branch name
+        run: |
+          BRANCH="${{ github.head_ref }}"
+          PATTERN='^(feat|fix|chore|docs|refactor|perf|test|ci|hotfix|release)/[a-z0-9-]+$'
+          if ! echo "$BRANCH" | grep -qE "$PATTERN"; then
+            echo "⚠️  Branch name '$BRANCH' does not follow the convention."
+            echo "   Expected: {type}/{description-in-kebab-case}"
+            echo "   Example:  feat/gateway-rate-limit"
+            # Warning only — don't block
+          else
+            echo "✅ Branch name is valid: $BRANCH"
+          fi

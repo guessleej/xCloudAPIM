@@ -1,0 +1,21 @@
+meta {
+  name: Invalidate Policy Cache
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{registry_url}}/api/v1/apis/{{api_id}}/policy-chain/invalidate
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 200 or 204", function() {
+    expect([200, 204]).to.include(res.status);
+  });
+}

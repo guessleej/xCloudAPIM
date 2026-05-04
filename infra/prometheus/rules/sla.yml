@@ -1,0 +1,74 @@
+groups:
+  - name: sla.recording_rules
+    interval: 1m
+    rules:
+
+      # ── Availability (MTTF / burn rate) ─────────────────────
+      - record: sla:gateway_availability:ratio_rate1h
+        expr: |
+          avg_over_time(up{job="gateway"}[1h])
+
+      - record: sla:gateway_success_rate:ratio_rate5m
+        expr: |
+          sum(rate(http_requests_total{job="gateway",status!~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="gateway"}[5m]))
+
+      - record: sla:gateway_p95_latency:histogram_quantile5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket{job="gateway"}[5m])) by (le)
+          )
+
+      - record: sla:gateway_p99_latency:histogram_quantile5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="gateway"}[5m])) by (le)
+          )
+
+      # ── Error Budget (target: 99.9% = 0.1% error budget) ────
+      - record: sla:error_budget_remaining:ratio_rate1h
+        expr: |
+          1 - (
+            sum(rate(http_requests_total{job="gateway",status=~"5.."}[1h]))
+            / sum(rate(http_requests_total{job="gateway"}[1h]))
+            / 0.001
+          )
+
+  - name: sla.alerts
+    rules:
+
+      - alert: SLAErrorBudgetBurn
+        expr: |
+          (
+            sum(rate(http_requests_total{job="gateway",status=~"5.."}[1h]))
+            / sum(rate(http_requests_total{job="gateway"}[1h]))
+          ) > 14.4 * 0.001
+        for: 2m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary:     "Error budget burning at 14.4x rate"
+          description: "At current error rate, monthly error budget will be exhausted in < 2 days."
+          runbook:     "https://wiki.internal/runbooks/sla-error-budget"
+
+      - alert: SLALatencySLOBreach
+        expr: sla:gateway_p99_latency:histogram_quantile5m > 1
+        for: 10m
+        labels:
+          severity: warning
+          team:     platform
+        annotations:
+          summary:     "Gateway P99 latency SLO breach (target < 1s)"
+          description: "P99 latency is {{ $value | humanizeDuration }} (SLO: < 1s)."
+
+      - alert: SLAAvailabilitySLOBreach
+        expr: sla:gateway_availability:ratio_rate1h < 0.999
+        for: 5m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary:     "Gateway availability SLO breach (target 99.9%)"
+          description: "1h availability is {{ $value | humanizePercentage }} (SLO: 99.9%)."

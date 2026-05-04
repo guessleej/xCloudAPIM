@@ -1,0 +1,21 @@
+meta {
+  name: List My Subscriptions
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{subscription_url}}/api/v1/subscriptions/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,45 @@
+meta {
+  name: Create Plan
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{subscription_url}}/api/v1/plans
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "apiId": "{{api_id}}",
+    "name": "Free Tier",
+    "description": "100 requests/day, no SLA",
+    "rateLimit": {
+      "requests": 100,
+      "window": "day"
+    },
+    "price": 0,
+    "currency": "USD"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("plan_id", res.body.data.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+}

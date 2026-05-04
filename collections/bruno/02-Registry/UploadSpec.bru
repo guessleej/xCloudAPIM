@@ -1,0 +1,39 @@
+meta {
+  name: Upload OpenAPI Spec
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{registry_url}}/api/v1/apis/{{api_id}}/spec
+  body: text
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/yaml
+}
+
+body:text {
+  openapi: "3.0.3"
+  info:
+    title: Pet Store API
+    version: "1.0.0"
+  paths:
+    /pets:
+      get:
+        summary: List all pets
+        responses:
+          "200":
+            description: A list of pets
+}
+
+tests {
+  test("status 200 or 204", function() {
+    expect([200, 204]).to.include(res.status);
+  });
+}

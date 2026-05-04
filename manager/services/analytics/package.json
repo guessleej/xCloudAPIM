@@ -1,0 +1,30 @@
+{
+  "name": "@xcloudapim/analytics-service",
+  "version": "1.0.0",
+  "description": "xCloudAPIM Analytics Service — Kafka Consumer + MongoDB + REST API",
+  "type": "module",
+  "main": "dist/app.js",
+  "scripts": {
+    "build":     "tsc -p tsconfig.json",
+    "start":     "node --enable-source-maps dist/app.js",
+    "dev":       "tsx watch src/app.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fastify":               "^4.27.0",
+    "@fastify/helmet":       "^11.1.1",
+    "@fastify/under-pressure": "^8.3.0",
+    "kafkajs":               "^2.2.4",
+    "ioredis":               "^5.3.2",
+    "mongodb":               "^6.6.0",
+    "pino":                  "^9.1.0",
+    "prom-client":           "^15.1.2",
+    "zod":                   "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node":  "^20.12.0",
+    "tsx":          "^4.10.5",
+    "typescript":   "^5.4.5"
+  },
+  "engines": { "node": ">=20.0.0" }
+}

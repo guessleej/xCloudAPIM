@@ -1,0 +1,24 @@
+meta {
+  name: Get API
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{registry_url}}/api/v1/apis/{{api_id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("id matches", function() {
+    expect(res.body.data.id).to.equal(bru.getEnvVar("api_id"));
+  });
+}

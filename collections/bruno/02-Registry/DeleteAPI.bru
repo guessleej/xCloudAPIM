@@ -1,0 +1,21 @@
+meta {
+  name: Delete API
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{registry_url}}/api/v1/apis/{{api_id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 204", function() {
+    expect(res.status).to.equal(204);
+  });
+}

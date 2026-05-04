@@ -1,0 +1,41 @@
+meta {
+  name: Create API Key
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{subscription_url}}/api/v1/subscriptions/{{subscription_id}}/keys
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "My Dev Key",
+    "expiresAt": null
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("api_key", res.body.data.key);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("has key", function() {
+    expect(res.body.data.key).to.be.a("string");
+  });
+}

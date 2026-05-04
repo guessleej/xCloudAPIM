@@ -1,0 +1,72 @@
+# ═══════════════════════════════════════════════════════════════
+#  K6 Load Test Runner + InfluxDB v2 storage
+#  使用方式：
+#    make k6-smoke
+#    make k6-load
+#    make k6-stress
+#  或直接：
+#    docker compose -f docker-compose.yml -f load-tests/docker-compose.k6.yml \
+#      run --rm k6 run /scripts/scenarios/smoke.js
+# ═══════════════════════════════════════════════════════════════
+name: xcloudapim-k6
+
+networks:
+  apim-net:
+    external: true
+    name: xcloudapim_apim-net
+
+volumes:
+  influxdb-k6-data:
+
+services:
+
+  # ─── InfluxDB v2 (k6 metrics store) ─────────────────────────
+  influxdb-k6:
+    image: influxdb:2.7-alpine
+    container_name: apim-influxdb-k6
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE:        setup
+      DOCKER_INFLUXDB_INIT_USERNAME:    admin
+      DOCKER_INFLUXDB_INIT_PASSWORD:    influx_k6_pass
+      DOCKER_INFLUXDB_INIT_ORG:         xcloudapim
+      DOCKER_INFLUXDB_INIT_BUCKET:      k6
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: k6-super-secret-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-k6-data:/var/lib/influxdb2
+    networks:
+      - apim-net
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── K6 Runner ───────────────────────────────────────────────
+  k6:
+    image: grafana/k6:0.54.0
+    container_name: apim-k6
+    volumes:
+      - .:/scripts:ro
+    networks:
+      - apim-net
+    environment:
+      K6_OUT:              influxdb=http://influxdb-k6:8086/k6?org=xcloudapim&token=k6-super-secret-token
+      AUTH_URL:            http://auth-service:8081
+      REGISTRY_URL:        http://registry-service:8082
+      SUBSCRIPTION_URL:    http://subscription-service:8084
+      BFF_URL:             http://bff:4000
+      GW_URL:              http://gateway:8080
+      TEST_API_KEY:        ${TEST_API_KEY:-}
+      TARGET_API_ID:       ${TARGET_API_ID:-}
+      TEST_PATH:           ${TEST_PATH:-/petstore/v1/pets}
+    depends_on:
+      influxdb-k6:
+        condition: service_healthy
+    # Override command per scenario via make targets:
+    #   docker compose … run k6 run /scripts/scenarios/smoke.js
+    entrypoint: ["k6"]
+    command:    ["run", "/scripts/scenarios/smoke.js"]
+    profiles:
+      - k6

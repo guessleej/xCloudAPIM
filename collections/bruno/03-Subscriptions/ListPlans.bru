@@ -1,0 +1,17 @@
+meta {
+  name: List Plans for API
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{subscription_url}}/api/v1/apis/{{api_id}}/plans
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

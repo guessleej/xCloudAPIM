@@ -1,0 +1,232 @@
+syntax = "proto3";
+
+package policy;
+option go_package = "github.com/xcloudapim/shared/proto/policy";
+
+// ─── Policy Engine Service ────────────────────────────────────
+service PolicyEngineService {
+  rpc GetPolicies      (GetPoliciesRequest)      returns (PolicyChain);
+  rpc CompilePolicy    (CompilePolicyRequest)    returns (CompileResult);
+  rpc ValidatePolicy   (ValidatePolicyRequest)   returns (ValidationResult);
+  rpc PublishChain     (PublishChainRequest)     returns (PublishResult);
+  rpc InvalidateCache  (InvalidateCacheRequest)  returns (InvalidateCacheResult);
+}
+
+// ─── Auth Service ─────────────────────────────────────────────
+service AuthService {
+  rpc ValidateToken  (ValidateTokenRequest)  returns (TokenClaims);
+  rpc RevokeToken    (RevokeTokenRequest)    returns (RevokeResult);
+  rpc GetJWKS        (GetJWKSRequest)        returns (JWKSResponse);
+  rpc GetClientInfo  (GetClientInfoRequest)  returns (ClientInfo);
+}
+
+// ─── API Registry Service ─────────────────────────────────────
+service RegistryService {
+  rpc GetApiRoute    (GetApiRouteRequest)    returns (ApiRoute);
+  rpc ListApiRoutes  (ListApiRoutesRequest)  returns (ApiRouteList);
+}
+
+// ─── Subscription Service ─────────────────────────────────────
+service SubscriptionService {
+  rpc GetClientQuota    (GetClientQuotaRequest)    returns (ClientQuota);
+  rpc IncrementUsage    (IncrementUsageRequest)    returns (UsageResult);
+  rpc CheckQuota        (CheckQuotaRequest)        returns (QuotaCheckResult);
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Policy Messages
+// ═══════════════════════════════════════════════════════════════
+message GetPoliciesRequest {
+  string api_id  = 1;
+  string path    = 2;
+  string method  = 3;
+}
+
+message PolicyChain {
+  string   api_id    = 1;
+  string   chain_id  = 2;
+  repeated Policy policies = 3;
+  int64    version   = 4;
+  string   etag      = 5;
+}
+
+message Policy {
+  string            id       = 1;
+  PolicyType        type     = 2;
+  PolicyPhase       phase    = 3;
+  int32             order    = 4;
+  bool              enabled  = 5;
+  map<string, string> config = 6;
+}
+
+enum PolicyType {
+  POLICY_TYPE_UNSPECIFIED   = 0;
+  POLICY_TYPE_JWT_AUTH      = 1;
+  POLICY_TYPE_API_KEY_AUTH  = 2;
+  POLICY_TYPE_RATE_LIMIT    = 3;
+  POLICY_TYPE_CORS          = 4;
+  POLICY_TYPE_REQUEST_TRANSFORM  = 5;
+  POLICY_TYPE_RESPONSE_TRANSFORM = 6;
+  POLICY_TYPE_IP_WHITELIST  = 7;
+  POLICY_TYPE_CACHE         = 8;
+  POLICY_TYPE_ENCRYPT       = 9;
+  POLICY_TYPE_CIRCUIT_BREAKER = 10;
+  POLICY_TYPE_LOGGING       = 11;
+}
+
+enum PolicyPhase {
+  PHASE_UNSPECIFIED = 0;
+  PHASE_PRE_REQUEST = 1;
+  PHASE_POST_REQUEST = 2;
+  PHASE_PRE_RESPONSE = 3;
+  PHASE_POST_RESPONSE = 4;
+}
+
+message CompilePolicyRequest {
+  string policy_dsl = 1;
+  string format     = 2;  // yaml | json
+}
+
+message CompileResult {
+  bool   success   = 1;
+  bytes  bytecode  = 2;
+  string error_msg = 3;
+}
+
+message ValidatePolicyRequest {
+  string policy_dsl = 1;
+  string format     = 2;
+}
+
+message ValidationResult {
+  bool             valid    = 1;
+  repeated string  errors   = 2;
+  repeated string  warnings = 3;
+}
+
+message PublishChainRequest {
+  string chain_id = 1;
+  string api_id   = 2;
+}
+
+message PublishResult {
+  bool   success  = 1;
+  string version  = 2;
+}
+
+message InvalidateCacheRequest {
+  string api_id = 1;
+}
+
+message InvalidateCacheResult {
+  bool success = 1;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Auth Messages
+// ═══════════════════════════════════════════════════════════════
+message ValidateTokenRequest {
+  string token    = 1;
+  string audience = 2;
+}
+
+message TokenClaims {
+  string          subject     = 1;
+  string          client_id   = 2;
+  repeated string scopes      = 3;
+  string          plan        = 4;
+  int64           expires_at  = 5;
+  map<string, string> extra   = 6;
+}
+
+message RevokeTokenRequest {
+  string token      = 1;
+  string token_type = 2;
+}
+
+message RevokeResult {
+  bool success = 1;
+}
+
+message GetJWKSRequest {}
+
+message JWKSResponse {
+  string jwks_json = 1;
+}
+
+message GetClientInfoRequest {
+  string client_id = 1;
+}
+
+message ClientInfo {
+  string          client_id    = 1;
+  string          name         = 2;
+  repeated string grant_types  = 3;
+  repeated string redirect_uris = 4;
+  string          plan         = 5;
+  bool            active       = 6;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Registry Messages
+// ═══════════════════════════════════════════════════════════════
+message GetApiRouteRequest {
+  string host   = 1;
+  string path   = 2;
+  string method = 3;
+}
+
+message ApiRoute {
+  string api_id        = 1;
+  string upstream_url  = 2;
+  string strip_prefix  = 3;
+  bool   active        = 4;
+  string version       = 5;
+}
+
+message ListApiRoutesRequest {
+  bool active_only = 1;
+}
+
+message ApiRouteList {
+  repeated ApiRoute routes = 1;
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  Subscription Messages
+// ═══════════════════════════════════════════════════════════════
+message GetClientQuotaRequest {
+  string client_id = 1;
+  string api_id    = 2;
+}
+
+message ClientQuota {
+  string client_id    = 1;
+  string api_id       = 2;
+  int64  rpm_limit    = 3;
+  int64  daily_limit  = 4;
+  int64  monthly_limit = 5;
+  string plan         = 6;
+}
+
+message IncrementUsageRequest {
+  string client_id = 1;
+  string api_id    = 2;
+  int64  count     = 3;
+}
+
+message UsageResult {
+  int64 current_count = 1;
+}
+
+message CheckQuotaRequest {
+  string client_id = 1;
+  string api_id    = 2;
+}
+
+message QuotaCheckResult {
+  bool   allowed       = 1;
+  string reason        = 2;
+  int64  remaining_rpm = 3;
+  int64  retry_after   = 4;
+}

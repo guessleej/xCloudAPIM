@@ -1,0 +1,104 @@
+version: 2
+
+updates:
+  # ─── GitHub Actions ──────────────────────────────────────────
+  - package-ecosystem: github-actions
+    directory:         "/"
+    schedule:
+      interval: weekly
+      day:       monday
+      time:      "09:00"
+      timezone:  Asia/Taipei
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # ─── Node.js — gateway ───────────────────────────────────────
+  - package-ecosystem: npm
+    directory:         "/gateway"
+    schedule:
+      interval: weekly
+    groups:
+      gateway-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Node.js — BFF ───────────────────────────────────────────
+  - package-ecosystem: npm
+    directory:         "/manager/bff"
+    schedule:
+      interval: weekly
+    groups:
+      bff-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Node.js — Studio ────────────────────────────────────────
+  - package-ecosystem: npm
+    directory:         "/studio"
+    schedule:
+      interval: weekly
+    groups:
+      studio-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Node.js — Portal ────────────────────────────────────────
+  - package-ecosystem: npm
+    directory:         "/portal"
+    schedule:
+      interval: weekly
+    groups:
+      portal-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Node.js — Analytics ─────────────────────────────────────
+  - package-ecosystem: npm
+    directory:         "/manager/services/analytics"
+    schedule:
+      interval: weekly
+    groups:
+      analytics-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Node.js — Notification ──────────────────────────────────
+  - package-ecosystem: npm
+    directory:         "/manager/services/notification"
+    schedule:
+      interval: weekly
+    groups:
+      notification-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Go — Auth Service ───────────────────────────────────────
+  - package-ecosystem: gomod
+    directory:         "/manager/services/auth"
+    schedule:
+      interval: weekly
+    groups:
+      auth-go-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Go — Registry Service ───────────────────────────────────
+  - package-ecosystem: gomod
+    directory:         "/manager/services/registry"
+    schedule:
+      interval: weekly
+    groups:
+      registry-go-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Go — Subscription Service ───────────────────────────────
+  - package-ecosystem: gomod
+    directory:         "/manager/services/subscription"
+    schedule:
+      interval: weekly
+    groups:
+      subscription-go-deps:
+        update-types: ["minor", "patch"]
+
+  # ─── Go — Policy Engine ──────────────────────────────────────
+  - package-ecosystem: gomod
+    directory:         "/policy-engine"
+    schedule:
+      interval: weekly
+    groups:
+      policy-go-deps:
+        update-types: ["minor", "patch"]

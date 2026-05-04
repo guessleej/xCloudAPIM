@@ -1,0 +1,69 @@
+name: Reusable — Node.js CI
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type:     string
+      working-directory:
+        required: true
+        type:     string
+      node-version:
+        required: false
+        type:     string
+        default:  "20"
+      run-build:
+        required: false
+        type:     boolean
+        default:  true
+      run-test:
+        required: false
+        type:     boolean
+        default:  false
+    secrets:
+      CODECOV_TOKEN:
+        required: false
+
+jobs:
+  node-ci:
+    name: ${{ inputs.service }}
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js ${{ inputs.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version:   ${{ inputs.node-version }}
+          cache:          npm
+          cache-dependency-path: ${{ inputs.working-directory }}/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Type check
+        run: npm run typecheck --if-present
+
+      - name: Build
+        if:   ${{ inputs.run-build }}
+        run:  npm run build
+
+      - name: Test
+        if:   ${{ inputs.run-test }}
+        run:  npm test -- --coverage --passWithNoTests
+
+      - name: Upload coverage
+        if:   ${{ inputs.run-test && success() }}
+        uses: codecov/codecov-action@v4
+        with:
+          token:   ${{ secrets.CODECOV_TOKEN }}
+          flags:   ${{ inputs.service }}
+          fail_ci_if_error: false

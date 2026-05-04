@@ -1,0 +1,47 @@
+meta {
+  name: GraphQL — Dashboard Stats
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{bff_url}}/graphql
+  body: graphql
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+body:graphql {
+  query GetDashboard {
+    dashboardStats {
+      totalAPIs
+      activeAPIs
+      totalSubscriptions
+      activeSubscriptions
+      requestsToday
+      errorsToday
+      p99LatencyMs
+    }
+    apis(page: 1, pageSize: 5) {
+      nodes {
+        id
+        name
+        status
+        chainId
+      }
+      total
+    }
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("no GQL errors", function() {
+    expect(res.body.errors).to.be.undefined;
+  });
+}

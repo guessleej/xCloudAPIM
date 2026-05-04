@@ -1,0 +1,1311 @@
+# ═══════════════════════════════════════════════════════════════
+#  xCloudAPIM — docker-compose.yml（開發環境）
+#  啟動：make up  |  停止：make down
+# ═══════════════════════════════════════════════════════════════
+name: xcloudapim
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-restart: &always-restart
+  restart: unless-stopped
+
+networks:
+  apim-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  postgres-data:
+  redis-master1-data:
+  redis-master2-data:
+  redis-master3-data:
+  kafka-data:
+  zookeeper-data:
+  zookeeper-log:
+  vault-data:
+  mongodb-data:
+  elasticsearch-data:
+  grafana-data:
+  prometheus-data:
+  influxdb-k6-data:
+
+# ═══════════════════════════════════════════════════════════════
+services:
+
+  # ─────────────────────────────────────────────────────────────
+  # PostgreSQL 16 + pgAdmin
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    <<: *always-restart
+    container_name: apim-postgres
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB:-apim}
+      POSTGRES_USER:     ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apim_pass_dev}
+      PGDATA:            /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./scripts/postgres-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-apim_user} -d ${POSTGRES_DB:-apim}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.10
+    logging: *default-logging
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    <<: *always-restart
+    container_name: apim-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL:    admin@xcloudapim.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+    volumes:
+      - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.11
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Redis 7 Cluster（3 master + 3 replica）
+  # ─────────────────────────────────────────────────────────────
+  redis-master-1:
+    image: redis:7-alpine
+    <<: *always-restart
+    container_name: apim-redis-m1
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
+      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+    volumes:
+      - redis-master1-data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.20
+
+  redis-master-2:
+    image: redis:7-alpine
+    <<: *always-restart
+    container_name: apim-redis-m2
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
+      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+    volumes:
+      - redis-master2-data:/data
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.21
+
+  redis-master-3:
+    image: redis:7-alpine
+    <<: *always-restart
+    container_name: apim-redis-m3
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
+      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+    volumes:
+      - redis-master3-data:/data
+    ports:
+      - "6381:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.22
+
+  redis-replica-1:
+    image: redis:7-alpine
+    <<: *always-restart
+    container_name: apim-redis-r1
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
+      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+    ports:
+      - "6382:6379"
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.23
+
+  redis-replica-2:
+    image: redis:7-alpine
+    <<: *always-restart
+    container_name: apim-redis-r2
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
+      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+    ports:
+      - "6383:6379"
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.24
+
+  redis-replica-3:
+    image: redis:7-alpine
+    <<: *always-restart
+    container_name: apim-redis-r3
+    command: >
+      redis-server
+      --port 6379
+      --cluster-enabled yes
+      --cluster-config-file nodes.conf
+      --cluster-node-timeout 5000
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
+      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+    ports:
+      - "6384:6379"
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.25
+
+  redis-cluster-init:
+    image: redis:7-alpine
+    container_name: apim-redis-cluster-init
+    command: >
+      sh -c "
+        sleep 5 &&
+        redis-cli -a ${REDIS_PASSWORD:-redis_pass_dev}
+          --cluster create
+          172.20.0.20:6379
+          172.20.0.21:6379
+          172.20.0.22:6379
+          172.20.0.23:6379
+          172.20.0.24:6379
+          172.20.0.25:6379
+          --cluster-replicas 1
+          --cluster-yes
+      "
+    depends_on:
+      redis-master-1:
+        condition: service_healthy
+      redis-master-2:
+        condition: service_healthy
+      redis-master-3:
+        condition: service_healthy
+    networks:
+      apim-net:
+
+  # ─────────────────────────────────────────────────────────────
+  # Apache Kafka 3.6 + Zookeeper + Kafka UI
+  # ─────────────────────────────────────────────────────────────
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    <<: *always-restart
+    container_name: apim-zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME:   2000
+      ZOOKEEPER_SYNC_LIMIT:  2
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-log:/var/lib/zookeeper/log
+    ports:
+      - "2181:2181"
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.30
+    logging: *default-logging
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    <<: *always-restart
+    container_name: apim-kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_DEFAULT_REPLICATION_FACTOR: 1
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_SEGMENT_BYTES: 1073741824
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.31
+    logging: *default-logging
+
+  kafka-init:
+    image: confluentinc/cp-kafka:7.6.0
+    container_name: apim-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    command: >
+      bash -c "
+        echo '▶ 建立 Kafka Topics...' &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic api.requests       --partitions 3 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic api.errors         --partitions 3 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic quota.exceeded     --partitions 1 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic policy.published   --partitions 1 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic auth.events        --partitions 2 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic notification.send  --partitions 2 --replication-factor 1 &&
+        kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic subscription.events --partitions 2 --replication-factor 1 &&
+        echo '✅ Kafka Topics 建立完成' &&
+        kafka-topics --bootstrap-server kafka:9092 --list
+      "
+    networks:
+      apim-net:
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    <<: *always-restart
+    container_name: apim-kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME:            local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER:        zookeeper:2181
+      DYNAMIC_CONFIG_ENABLED:            "true"
+    ports:
+      - "8080:8080"
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.32
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # HashiCorp Vault（Dev Mode）
+  # ─────────────────────────────────────────────────────────────
+  vault:
+    image: hashicorp/vault:1.15
+    <<: *always-restart
+    container_name: apim-vault
+    command: vault server -dev -dev-root-token-id=${VAULT_TOKEN:-dev-root-token} -dev-listen-address=0.0.0.0:8200
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-dev-root-token}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://127.0.0.1:8200
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - vault-data:/vault/data
+    ports:
+      - "8200:8200"
+    healthcheck:
+      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 | grep -q 'Initialized'"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.40
+    logging: *default-logging
+
+  vault-init:
+    image: hashicorp/vault:1.15
+    container_name: apim-vault-init
+    entrypoint: ["sh", "/scripts/init-vault.sh"]
+    environment:
+      VAULT_ADDR:     http://vault:8200
+      VAULT_TOKEN:    ${VAULT_TOKEN:-dev-root-token}
+      POSTGRES_HOST:  postgres
+      POSTGRES_DB:    ${POSTGRES_DB:-apim}
+      POSTGRES_USER:  ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apim_pass_dev}
+      REDIS_HOST:     redis-master-1
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_pass_dev}
+    volumes:
+      - ./scripts/init-vault.sh:/scripts/init-vault.sh:ro
+    depends_on:
+      vault:
+        condition: service_healthy
+    networks:
+      apim-net:
+
+  # ─────────────────────────────────────────────────────────────
+  # MongoDB 7 + Mongo Express
+  # ─────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    <<: *always-restart
+    container_name: apim-mongodb
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-apim_user}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongo_pass_dev}
+      MONGO_INITDB_DATABASE:      ${MONGO_DB:-apim_analytics}
+    volumes:
+      - mongodb-data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.50
+    logging: *default-logging
+
+  mongo-express:
+    image: mongo-express:latest
+    <<: *always-restart
+    container_name: apim-mongo-express
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-apim_user}
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-mongo_pass_dev}
+      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/
+      ME_CONFIG_BASICAUTH:             false
+    ports:
+      - "8081:8081"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.51
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Elasticsearch 8 + Kibana
+  # ─────────────────────────────────────────────────────────────
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    <<: *always-restart
+    container_name: apim-elasticsearch
+    environment:
+      - node.name=es01
+      - cluster.name=apim-cluster
+      - discovery.type=single-node
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-elastic_pass_dev}
+      - xpack.security.enabled=true
+      - xpack.security.http.ssl.enabled=false
+      - xpack.security.transport.ssl.enabled=false
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:-elastic_pass_dev} http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.60
+    logging: *default-logging
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.0
+    <<: *always-restart
+    container_name: apim-kibana
+    environment:
+      ELASTICSEARCH_HOSTS:    http://elasticsearch:9200
+      ELASTICSEARCH_USERNAME: kibana_system
+      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD:-kibana_pass_dev}
+      XPACK_SECURITY_ENCRYPTIONKEY: ${KIBANA_ENCRYPTION_KEY:-kibana_enc_key_32_chars_minimum}
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.61
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Flyway — DB Migration
+  # ─────────────────────────────────────────────────────────────
+  flyway:
+    image: flyway/flyway:10-alpine
+    container_name: apim-flyway
+    command: >
+      -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-apim}
+      -user=${POSTGRES_USER:-apim_user}
+      -password=${POSTGRES_PASSWORD:-apim_pass_dev}
+      -connectRetries=10
+      migrate
+    volumes:
+      - ./migrations:/flyway/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      apim-net:
+
+  # ─────────────────────────────────────────────────────────────
+  # Observability Stack
+  # ─────────────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    <<: *always-restart
+    container_name: apim-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/rules:/etc/prometheus/rules:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.70
+    logging: *default-logging
+
+  grafana:
+    image: grafana/grafana:10.3.0
+    <<: *always-restart
+    container_name: apim-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER:     admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_USERS_ALLOW_SIGN_UP:     "false"
+      GF_FEATURE_TOGGLES_ENABLE:  "traceToMetrics"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3002:3000"
+    depends_on:
+      - prometheus
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.71
+    logging: *default-logging
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.54
+    <<: *always-restart
+    container_name: apim-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+      SPAN_STORAGE_TYPE:      memory
+    ports:
+      - "16686:16686"   # Jaeger UI
+      - "4317:4317"     # OTLP gRPC
+      - "4318:4318"     # OTLP HTTP
+      - "14268:14268"   # Jaeger HTTP
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.72
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Mailhog — 本地 SMTP 測試
+  # ─────────────────────────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    <<: *always-restart
+    container_name: apim-mailhog
+    ports:
+      - "1025:1025"   # SMTP
+      - "8025:8025"   # Web UI
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.80
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Analytics Service（Node.js 20 + Fastify + Kafka Consumer）
+  # ─────────────────────────────────────────────────────────────
+  analytics-service:
+    build:
+      context: ./manager/services/analytics
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/analytics-service:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-analytics
+    environment:
+      NODE_ENV:            ${NODE_ENV:-production}
+      PORT:                8085
+      KAFKA_BROKERS:       kafka:9092
+      KAFKA_GROUP_ID:      analytics-service
+      KAFKA_CLIENT_ID:     analytics-service
+      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin
+      MONGO_DB:            ${MONGO_DB:-apim_analytics}
+      REDIS_HOST:          redis-master-1
+      REDIS_PORT:          6379
+      REDIS_PASSWORD:      ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_DB:            2
+      RAW_EVENT_TTL_DAYS:  30
+      OTEL_SERVICE_NAME:   analytics-service
+    ports:
+      - "8085:8085"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis-master-1:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8085/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.92
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Notification Service（Node.js 20 + Fastify + Kafka Consumer）
+  # ─────────────────────────────────────────────────────────────
+  notification-service:
+    build:
+      context: ./manager/services/notification
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/notification-service:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-notification
+    environment:
+      NODE_ENV:              ${NODE_ENV:-production}
+      PORT:                  8086
+      KAFKA_BROKERS:         kafka:9092
+      KAFKA_GROUP_ID:        notification-service
+      KAFKA_CLIENT_ID:       notification-service
+      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin
+      MONGO_DB:              ${MONGO_DB:-apim_analytics}
+      REDIS_HOST:            redis-master-1
+      REDIS_PORT:            6379
+      REDIS_PASSWORD:        ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_DB:              3
+      SMTP_HOST:             mailhog
+      SMTP_PORT:             1025
+      SMTP_SECURE:           "false"
+      SMTP_FROM:             noreply@xcloudapim.local
+      WEBHOOK_MAX_RETRIES:   3
+      WEBHOOK_RETRY_BASE_MS: 1000
+      WEBHOOK_TIMEOUT_MS:    10000
+      NOTIFICATION_TTL_DAYS: 90
+      OTEL_SERVICE_NAME:     notification-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8086/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.93
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # BFF — GraphQL（Apollo Server 4 + Node.js 20）
+  # ─────────────────────────────────────────────────────────────
+  bff:
+    build:
+      context: ./manager/bff
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/bff:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-bff
+    environment:
+      NODE_ENV:                   ${NODE_ENV:-production}
+      PORT:                       4000
+      AUTH_SERVICE_URL:           http://auth-service:8081
+      REGISTRY_SERVICE_URL:       http://registry-service:8082
+      POLICY_ENGINE_URL:          http://policy-engine:8083
+      SUBSCRIPTION_SERVICE_URL:   http://subscription-service:8084
+      JWKS_URL:                   http://auth-service:8081/oauth2/jwks
+      JWKS_CACHE_TTL_MS:          300000
+      JWT_ISSUER:                 ${JWT_ISSUER:-}
+      JWT_AUDIENCE:               ${JWT_AUDIENCE:-}
+      GRAPHQL_PATH:               /graphql
+      GRAPHQL_MAX_DEPTH:          10
+      INTROSPECTION_ENABLED:      ${INTROSPECTION_ENABLED:-true}
+      UPSTREAM_TIMEOUT_MS:        10000
+      REDIS_HOST:                 redis-master-1
+      REDIS_PORT:                 6379
+      REDIS_PASSWORD:             ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_DB:                   1
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME:          bff
+    ports:
+      - "4000:4000"
+    depends_on:
+      redis-master-1:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:4000/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.91
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # API Gateway（Node.js 20 + Fastify v4）
+  # ─────────────────────────────────────────────────────────────
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/gateway:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-gateway
+    environment:
+      NODE_ENV:                   ${NODE_ENV:-production}
+      PORT:                       8080
+      REDIS_HOST:                 redis-master-1
+      REDIS_PORT:                 6379
+      REDIS_PASSWORD:             ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_DB:                   0
+      AUTH_SERVICE_URL:           http://auth-service:8081
+      REGISTRY_SERVICE_URL:       http://registry-service:8082
+      POLICY_ENGINE_URL:          http://policy-engine:8083
+      SUBSCRIPTION_SERVICE_URL:   http://subscription-service:8084
+      JWKS_URL:                   http://auth-service:8081/oauth2/jwks
+      JWKS_CACHE_TTL_MS:          300000
+      ROUTE_REFRESH_INTERVAL_MS:  30000
+      ROUTE_CACHE_TTL_S:          300
+      PROXY_TIMEOUT_MS:           30000
+      PROXY_KEEP_ALIVE_TIMEOUT_MS: 60000
+      MAX_BODY_SIZE_MB:           10
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME:          api-gateway
+    ports:
+      - "8090:8080"
+    depends_on:
+      redis-master-1:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8080/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 768M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.90
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Policy Studio（React 18 + Vite → nginx static serve）
+  # ─────────────────────────────────────────────────────────────
+  studio:
+    build:
+      context: ./studio
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/studio:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-studio
+    ports:
+      - "5173:80"
+    depends_on:
+      bff:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:80/"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 128M
+        reservations:
+          cpus: '0.05'
+          memory: 32M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.94
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Developer Portal（Next.js 14 App Router）
+  # ─────────────────────────────────────────────────────────────
+  portal:
+    build:
+      context: ./portal
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/portal:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-portal
+    environment:
+      NODE_ENV:             ${NODE_ENV:-production}
+      PORT:                 3001
+      BFF_URL:              http://bff:4000/graphql
+      SESSION_SECRET:       ${SESSION_SECRET:-change-me-in-production-32chars-min}
+      NEXT_PUBLIC_SITE_URL: ${PORTAL_URL:-http://localhost:3001}
+      NEXT_PUBLIC_SITE_NAME:    xCloudAPIM Developer Portal
+      NEXT_PUBLIC_GATEWAY_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8090}
+      REGISTRY_SERVICE_URL:    http://registry-service:8082
+    ports:
+      - "3001:3001"
+    depends_on:
+      bff:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:3001/api/health"]
+      interval: 20s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.95
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Auth Service（Go 1.22）
+  # ─────────────────────────────────────────────────────────────
+  auth-service:
+    build:
+      context: ./manager/services/auth
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/auth-service:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-auth
+    environment:
+      APP_ENV:            ${NODE_ENV:-production}
+      PORT:               8081
+      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+      REDIS_ADDR:         redis-master-1:6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      JWT_SECRET:         ${JWT_SECRET:-change-me-jwt-secret-32chars-min!!}
+      JWT_ACCESS_TTL:     ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL:    ${JWT_REFRESH_TTL:-168h}
+      OAUTH2_ISSUER:      ${OAUTH2_ISSUER:-http://localhost/api/auth}
+      SMTP_HOST:          mailhog
+      SMTP_PORT:          1025
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME:  auth-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-master-1:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.81
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Registry Service（Go 1.22）
+  # ─────────────────────────────────────────────────────────────
+  registry-service:
+    build:
+      context: ./manager/services/registry
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/registry-service:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-registry
+    environment:
+      APP_ENV:            ${NODE_ENV:-production}
+      PORT:               8082
+      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+      REDIS_ADDR:         redis-master-1:6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin
+      ES_ADDRESSES:       http://elasticsearch:9200
+      KAFKA_BROKERS:      kafka:9092
+      KAFKA_TOPIC_PREFIX: apim
+      AUTH_SERVICE_URL:   http://auth-service:8081
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME:  registry-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
+        reservations:
+          cpus: '0.1'
+          memory: 96M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.82
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Policy Engine（Go 1.22）
+  # ─────────────────────────────────────────────────────────────
+  policy-engine:
+    build:
+      context: ./policy-engine
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/policy-engine:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-policy-engine
+    environment:
+      APP_ENV:            ${NODE_ENV:-production}
+      PORT:               8083
+      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+      REDIS_ADDR:         redis-master-1:6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      KAFKA_BROKERS:      kafka:9092
+      KAFKA_TOPIC_PREFIX: apim
+      REGISTRY_SERVICE_URL: http://registry-service:8082
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME:  policy-engine
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-master-1:
+        condition: service_healthy
+      registry-service:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.83
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Subscription Service（Go 1.22）
+  # ─────────────────────────────────────────────────────────────
+  subscription-service:
+    build:
+      context: ./manager/services/subscription
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/subscription-service:${IMAGE_TAG:-latest}
+    <<: *always-restart
+    container_name: apim-subscription
+    environment:
+      APP_ENV:            ${NODE_ENV:-production}
+      PORT:               8084
+      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+      REDIS_ADDR:         redis-master-1:6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      KAFKA_BROKERS:      kafka:9092
+      KAFKA_TOPIC_PREFIX: apim
+      AUTH_SERVICE_URL:   http://auth-service:8081
+      REGISTRY_SERVICE_URL: http://registry-service:8082
+      NOTIFICATION_SERVICE_URL: http://notification-service:8085
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
+      OTEL_SERVICE_NAME:  subscription-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis-master-1:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.05'
+          memory: 64M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.84
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Nginx Reverse Proxy（對外單一入口）
+  # ─────────────────────────────────────────────────────────────
+  nginx:
+    image: nginx:1.27.0-alpine
+    <<: *always-restart
+    container_name: apim-nginx
+    volumes:
+      - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      gateway:
+        condition: service_healthy
+      bff:
+        condition: service_healthy
+      studio:
+        condition: service_healthy
+      portal:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 64M
+        reservations:
+          cpus: '0.05'
+          memory: 16M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.100
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Prometheus Exporters
+  # ─────────────────────────────────────────────────────────────
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    <<: *always-restart
+    container_name: apim-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.110
+    logging: *default-logging
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.62.0-alpine
+    <<: *always-restart
+    container_name: apim-redis-exporter
+    environment:
+      REDIS_ADDR:     redis://redis-master-1:6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_pass_dev}
+    depends_on:
+      redis-master-1:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.111
+    logging: *default-logging
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.2
+    <<: *always-restart
+    container_name: apim-node-exporter
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.112
+    logging: *default-logging
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.1.0
+    <<: *always-restart
+    container_name: apim-nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx/nginx_status'
+    depends_on:
+      nginx:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.113
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # Alertmanager
+  # ─────────────────────────────────────────────────────────────
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    <<: *always-restart
+    container_name: apim-alertmanager
+    volumes:
+      - ./infra/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    ports:
+      - "9093:9093"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.114
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
+  # InfluxDB v2（K6 metrics store）
+  # ─────────────────────────────────────────────────────────────
+  influxdb-k6:
+    image: influxdb:2.7-alpine
+    <<: *always-restart
+    container_name: apim-influxdb-k6
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE:        setup
+      DOCKER_INFLUXDB_INIT_USERNAME:    admin
+      DOCKER_INFLUXDB_INIT_PASSWORD:    influx_k6_pass
+      DOCKER_INFLUXDB_INIT_ORG:         xcloudapim
+      DOCKER_INFLUXDB_INIT_BUCKET:      k6
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: k6-super-secret-token
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-k6-data:/var/lib/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    networks:
+      apim-net:
+        ipv4_address: 172.20.0.115
+    logging: *default-logging

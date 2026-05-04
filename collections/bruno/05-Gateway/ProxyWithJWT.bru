@@ -1,0 +1,25 @@
+meta {
+  name: Proxy Request (JWT Auth)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{gateway_url}}/petstore/v1/pets
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Accept: application/json
+}
+
+tests {
+  test("not 401 or 403", function() {
+    expect([401, 403]).to.not.include(res.status);
+  });
+}

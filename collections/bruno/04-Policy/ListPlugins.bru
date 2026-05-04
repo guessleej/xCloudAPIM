@@ -1,0 +1,24 @@
+meta {
+  name: List Available Plugins
+  type: http
+  seq: 5
+}
+
+get {
+  url: http://localhost:8083/api/v1/plugins
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("has plugins array", function() {
+    expect(res.body.data).to.be.an("array");
+  });
+}

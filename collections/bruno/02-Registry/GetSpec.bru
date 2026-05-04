@@ -1,0 +1,17 @@
+meta {
+  name: Get OpenAPI Spec
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{registry_url}}/apis/{{api_id}}/spec
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

@@ -1,0 +1,39 @@
+apiVersion: 1
+
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+  - name: Jaeger
+    orgId: 1
+
+datasources:
+  - name:      Prometheus
+    type:      prometheus
+    access:    proxy
+    url:       http://prometheus:9090
+    isDefault: true
+    uid:       prometheus
+    jsonData:
+      httpMethod:   POST
+      timeInterval: 15s
+      exemplarTraceIdDestinations:
+        - name:           traceID
+          datasourceUid:  jaeger
+
+  - name:   Jaeger
+    type:   jaeger
+    access: proxy
+    url:    http://jaeger:16686
+    uid:    jaeger
+
+  - name:   InfluxDB-K6
+    type:   influxdb
+    access: proxy
+    url:    http://influxdb-k6:8086
+    uid:    influxdb-k6
+    jsonData:
+      version:       Flux
+      organization:  xcloudapim
+      defaultBucket: k6
+    secureJsonData:
+      token: k6-super-secret-token

@@ -1,0 +1,40 @@
+meta {
+  name: Subscribe to Plan
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{subscription_url}}/api/v1/subscriptions
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "planId": "{{plan_id}}"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("subscription_id", res.body.data.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("has subscriptionId", function() {
+    expect(res.body.data.id).to.be.a("string");
+  });
+}

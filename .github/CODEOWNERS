@@ -1,0 +1,39 @@
+# ═══════════════════════════════════════════════════════════════
+#  xCloudAPIM — Code Owners
+#  https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+# ═══════════════════════════════════════════════════════════════
+
+# Default owners for everything
+*                           @xcloudapim/platform-team
+
+# API Gateway
+/gateway/                   @xcloudapim/gateway-team
+/infra/nginx/               @xcloudapim/gateway-team
+
+# Go Backend Services
+/manager/services/auth/     @xcloudapim/backend-team
+/manager/services/registry/ @xcloudapim/backend-team
+/manager/services/subscription/ @xcloudapim/backend-team
+/policy-engine/             @xcloudapim/backend-team
+
+# BFF + Node services
+/manager/bff/               @xcloudapim/fullstack-team
+/manager/services/analytics/    @xcloudapim/fullstack-team
+/manager/services/notification/ @xcloudapim/fullstack-team
+
+# Frontend
+/studio/                    @xcloudapim/frontend-team
+/portal/                    @xcloudapim/frontend-team
+
+# Infrastructure & CI
+/.github/                   @xcloudapim/devops-team
+/infra/                     @xcloudapim/devops-team
+/docker-compose*.yml        @xcloudapim/devops-team
+/Makefile                   @xcloudapim/devops-team
+
+# Database migrations — require DBA + backend review
+/migrations/                @xcloudapim/dba-team @xcloudapim/backend-team
+
+# Security-sensitive files
+/.github/workflows/security.yml  @xcloudapim/security-team
+/infra/alertmanager/             @xcloudapim/security-team

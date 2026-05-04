@@ -1,0 +1,302 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop, "release/**"]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group:  ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents:      read
+  pull-requests: write  # for PR comment coverage reports
+  checks:        write
+
+# ═══════════════════════════════════════════════════════════════
+jobs:
+
+  # ─────────────────────────────────────────────────────────────
+  # Changed-paths detection — skip irrelevant jobs on PR
+  # ─────────────────────────────────────────────────────────────
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-24.04
+    outputs:
+      gateway:      ${{ steps.filter.outputs.gateway }}
+      bff:          ${{ steps.filter.outputs.bff }}
+      studio:       ${{ steps.filter.outputs.studio }}
+      portal:       ${{ steps.filter.outputs.portal }}
+      analytics:    ${{ steps.filter.outputs.analytics }}
+      notification: ${{ steps.filter.outputs.notification }}
+      auth:         ${{ steps.filter.outputs.auth }}
+      registry:     ${{ steps.filter.outputs.registry }}
+      subscription: ${{ steps.filter.outputs.subscription }}
+      policy:       ${{ steps.filter.outputs.policy }}
+      migrations:   ${{ steps.filter.outputs.migrations }}
+      infra:        ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            gateway:
+              - 'gateway/**'
+            bff:
+              - 'manager/bff/**'
+            studio:
+              - 'studio/**'
+            portal:
+              - 'portal/**'
+            analytics:
+              - 'manager/services/analytics/**'
+            notification:
+              - 'manager/services/notification/**'
+            auth:
+              - 'manager/services/auth/**'
+            registry:
+              - 'manager/services/registry/**'
+            subscription:
+              - 'manager/services/subscription/**'
+            policy:
+              - 'policy-engine/**'
+            migrations:
+              - 'migrations/**'
+            infra:
+              - 'infra/**'
+              - 'docker-compose*.yml'
+              - '.github/workflows/**'
+
+  # ─────────────────────────────────────────────────────────────
+  # Node.js Services
+  # ─────────────────────────────────────────────────────────────
+  ci-gateway:
+    name: CI / gateway
+    needs: changes
+    if: ${{ needs.changes.outputs.gateway == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           gateway
+      working-directory: gateway
+      run-test:          true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-bff:
+    name: CI / bff
+    needs: changes
+    if: ${{ needs.changes.outputs.bff == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           bff
+      working-directory: manager/bff
+      run-test:          true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-studio:
+    name: CI / studio
+    needs: changes
+    if: ${{ needs.changes.outputs.studio == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           studio
+      working-directory: studio
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-portal:
+    name: CI / portal
+    needs: changes
+    if: ${{ needs.changes.outputs.portal == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           portal
+      working-directory: portal
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-analytics:
+    name: CI / analytics
+    needs: changes
+    if: ${{ needs.changes.outputs.analytics == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           analytics-service
+      working-directory: manager/services/analytics
+      run-test:          true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-notification:
+    name: CI / notification
+    needs: changes
+    if: ${{ needs.changes.outputs.notification == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           notification-service
+      working-directory: manager/services/notification
+      run-test:          true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Go Services
+  # ─────────────────────────────────────────────────────────────
+  ci-auth:
+    name: CI / auth-service
+    needs: changes
+    if: ${{ needs.changes.outputs.auth == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-go.yml
+    with:
+      service:           auth-service
+      working-directory: manager/services/auth
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-registry:
+    name: CI / registry-service
+    needs: changes
+    if: ${{ needs.changes.outputs.registry == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-go.yml
+    with:
+      service:           registry-service
+      working-directory: manager/services/registry
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-subscription:
+    name: CI / subscription-service
+    needs: changes
+    if: ${{ needs.changes.outputs.subscription == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-go.yml
+    with:
+      service:           subscription-service
+      working-directory: manager/services/subscription
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-policy:
+    name: CI / policy-engine
+    needs: changes
+    if: ${{ needs.changes.outputs.policy == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-go.yml
+    with:
+      service:           policy-engine
+      working-directory: policy-engine
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # Database Migration Lint
+  # ─────────────────────────────────────────────────────────────
+  migration-lint:
+    name: Migration lint
+    needs: changes
+    if: ${{ needs.changes.outputs.migrations == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Flyway naming convention
+        run: |
+          set -e
+          for f in migrations/V*.sql; do
+            if ! echo "$f" | grep -qE '^migrations/V[0-9]+__[a-z_]+\.sql$'; then
+              echo "❌ Invalid migration filename: $f"
+              echo "   Expected: V{number}__{lowercase_with_underscores}.sql"
+              exit 1
+            fi
+          done
+          echo "✅ All migration filenames valid"
+
+  # ─────────────────────────────────────────────────────────────
+  # Docker Compose Validation
+  # ─────────────────────────────────────────────────────────────
+  compose-validate:
+    name: docker-compose validate
+    needs: changes
+    if: ${{ needs.changes.outputs.infra == 'true' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose syntax
+        run: docker compose -f docker-compose.yml config --quiet
+      - name: Check for missing volumes/networks
+        run: docker compose -f docker-compose.yml config > /tmp/compose-resolved.yml && echo "✅ Compose config resolved"
+
+  # ─────────────────────────────────────────────────────────────
+  # K6 Smoke Test (integration, only on push to main/develop)
+  # ─────────────────────────────────────────────────────────────
+  smoke-test:
+    name: K6 Smoke Test
+    needs:
+      - ci-gateway
+      - ci-auth
+      - ci-registry
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create .env
+        run: cp .env.example .env
+
+      - name: Start core services
+        run: |
+          docker compose up -d postgres redis-master-1 redis-master-2 redis-master-3 \
+            auth-service registry-service gateway bff influxdb-k6
+          echo "Waiting for services to be healthy..."
+          timeout 120 bash -c 'until docker compose ps | grep -v "Exit\|starting" | grep -q "healthy"; do sleep 5; done' || true
+          docker compose ps
+
+      - name: Run K6 Smoke Test
+        run: |
+          docker compose -f docker-compose.yml -f load-tests/docker-compose.k6.yml \
+            run --rm k6 run /scripts/scenarios/smoke.js
+
+      - name: Upload K6 results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-smoke-results
+          path: /tmp/k6-*.json
+          retention-days: 7
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
+
+  # ─────────────────────────────────────────────────────────────
+  # CI Gate — all required checks must pass
+  # ─────────────────────────────────────────────────────────────
+  ci-success:
+    name: ✅ CI passed
+    runs-on: ubuntu-24.04
+    needs:
+      - ci-gateway
+      - ci-bff
+      - ci-studio
+      - ci-portal
+      - ci-auth
+      - ci-registry
+      - ci-subscription
+      - ci-policy
+    if: always()
+    steps:
+      - name: Check all jobs
+        run: |
+          results='${{ toJson(needs) }}'
+          failed=$(echo "$results" | python3 -c "
+          import sys, json
+          d = json.load(sys.stdin)
+          failed = [k for k, v in d.items() if v['result'] not in ('success','skipped')]
+          if failed: print('\n'.join(failed)); sys.exit(1)
+          ")
+          echo "✅ All CI jobs passed or were skipped"

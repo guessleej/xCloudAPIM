@@ -1,0 +1,26 @@
+meta {
+  name: Rate Limit Headers Check
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{gateway_url}}/petstore/v1/pets
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("has rate limit headers", function() {
+    const headers = res.headers;
+    expect(
+      headers["x-ratelimit-limit"] ||
+      headers["ratelimit-limit"] ||
+      headers["x-rate-limit-limit"]
+    ).to.exist;
+  });
+}

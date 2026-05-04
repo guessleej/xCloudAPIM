@@ -1,0 +1,57 @@
+meta {
+  name: Save Policy Chain
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{registry_url}}/api/v1/apis/{{api_id}}/policy-chain
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "version": 1,
+    "policies": [
+      {
+        "id": "jwt-auth-1",
+        "type": "jwt_auth",
+        "phase": "PRE_REQUEST",
+        "enabled": true,
+        "order": 0,
+        "config": {
+          "issuer": "https://auth.example.com",
+          "audience": "api",
+          "methods": "jwt"
+        }
+      },
+      {
+        "id": "rate-limit-1",
+        "type": "rate_limit",
+        "phase": "PRE_REQUEST",
+        "enabled": true,
+        "order": 1,
+        "config": {
+          "requests": 1000,
+          "window": "minute",
+          "key": "sub"
+        }
+      }
+    ]
+  }
+}
+
+tests {
+  test("status 200 or 201", function() {
+    expect([200, 201]).to.include(res.status);
+  });
+}

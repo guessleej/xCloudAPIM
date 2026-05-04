@@ -1,0 +1,20 @@
+meta {
+  name: JWKS (Public Keys)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{auth_url}}/oauth2/jwks
+  body: none
+  auth: none
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("has keys array", function() {
+    expect(res.body.keys).to.be.an("array");
+  });
+}

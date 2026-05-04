@@ -1,0 +1,53 @@
+meta {
+  name: GraphQL — List APIs
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{bff_url}}/graphql
+  body: graphql
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:graphql {
+  query GetAPIs($page: Int, $pageSize: Int) {
+    apis(page: $page, pageSize: $pageSize) {
+      nodes {
+        id
+        name
+        version
+        basePath
+        status
+        chainId
+      }
+      total
+      page
+      pageSize
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "page": 1,
+    "pageSize": 20
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("no GQL errors", function() {
+    expect(res.body.errors).to.be.undefined;
+  });
+}

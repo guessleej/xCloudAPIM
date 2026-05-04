@@ -1,0 +1,53 @@
+meta {
+  name: GraphQL — Login
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{bff_url}}/graphql
+  body: graphql
+  auth: none
+}
+
+body:graphql {
+  mutation Login($email: String!, $password: String!) {
+    login(email: $email, password: $password) {
+      accessToken
+      refreshToken
+      user {
+        id
+        email
+        name
+        role
+      }
+    }
+  }
+}
+
+body:graphql:vars {
+  {
+    "email": "dev@example.com",
+    "password": "P@ssword123!"
+  }
+}
+
+script:post-response {
+  if (res.status === 200 && !res.body.errors) {
+    const login = res.body.data.login;
+    bru.setEnvVar("access_token",  login.accessToken);
+    bru.setEnvVar("refresh_token", login.refreshToken);
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("no GQL errors", function() {
+    expect(res.body.errors).to.be.undefined;
+  });
+  test("has accessToken", function() {
+    expect(res.body.data.login.accessToken).to.be.a("string");
+  });
+}

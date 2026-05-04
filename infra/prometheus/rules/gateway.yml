@@ -1,0 +1,89 @@
+groups:
+  - name: gateway.alerts
+    interval: 30s
+    rules:
+
+      # ── Availability ─────────────────────────────────────────
+      - alert: GatewayDown
+        expr: up{job="gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary:     "API Gateway is down"
+          description: "Gateway instance {{ $labels.instance }} has been unreachable for > 1 minute."
+          runbook:     "https://wiki.internal/runbooks/gateway-down"
+
+      - alert: GatewayHighErrorRate
+        expr: |
+          sum(rate(http_requests_total{job="gateway",status=~"5.."}[5m]))
+          /
+          sum(rate(http_requests_total{job="gateway"}[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary:     "Gateway error rate > 5%"
+          description: "5xx rate is {{ $value | humanizePercentage }} over the last 5 minutes."
+
+      - alert: GatewayHighLatency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="gateway"}[5m])) by (le)
+          ) > 2
+        for: 3m
+        labels:
+          severity: warning
+          team:     platform
+        annotations:
+          summary:     "Gateway P99 latency > 2s"
+          description: "P99 latency is {{ $value | humanizeDuration }}."
+
+      # ── Rate Limit Pressure ──────────────────────────────────
+      - alert: GatewayHighRateLimitRate
+        expr: |
+          sum(rate(gateway_rate_limit_rejected_total[5m])) /
+          sum(rate(http_requests_total{job="gateway"}[5m])) > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          team:     platform
+        annotations:
+          summary:     "High rate-limit rejection rate > 10%"
+          description: "{{ $value | humanizePercentage }} of requests are being rate-limited."
+
+      # ── Traffic Anomalies ────────────────────────────────────
+      - alert: GatewayTrafficSpike
+        expr: |
+          sum(rate(http_requests_total{job="gateway"}[2m]))
+          > 2 * sum(rate(http_requests_total{job="gateway"}[10m] offset 10m))
+        for: 3m
+        labels:
+          severity: warning
+          team:     platform
+        annotations:
+          summary:     "Gateway traffic spike detected"
+          description: "Current RPS is 2x the rate from 10 minutes ago."
+
+      - alert: GatewayTrafficDrop
+        expr: |
+          sum(rate(http_requests_total{job="gateway"}[5m])) == 0
+        for: 5m
+        labels:
+          severity: critical
+          team:     platform
+        annotations:
+          summary:     "Gateway receiving zero traffic"
+          description: "No requests processed in the last 5 minutes. Possible upstream failure."
+
+      # ── Recording rules ──────────────────────────────────────
+      - record: job:http_requests:rate5m
+        expr:  sum(rate(http_requests_total{job="gateway"}[5m])) by (status)
+
+      - record: job:http_request_duration_p99:5m
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_request_duration_seconds_bucket{job="gateway"}[5m])) by (le)
+          )

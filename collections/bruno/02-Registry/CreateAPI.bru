@@ -1,0 +1,46 @@
+meta {
+  name: Create API
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{registry_url}}/api/v1/apis
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "name": "Pet Store API",
+    "version": "1.0.0",
+    "basePath": "/petstore/v1",
+    "upstreamUrl": "http://upstream-petstore:3000",
+    "description": "A sample pet store API",
+    "tags": ["pets", "demo"],
+    "status": "ACTIVE"
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setEnvVar("api_id", res.body.data.id);
+  }
+}
+
+tests {
+  test("status 201", function() {
+    expect(res.status).to.equal(201);
+  });
+  test("has id", function() {
+    expect(res.body.data.id).to.be.a("string");
+  });
+}

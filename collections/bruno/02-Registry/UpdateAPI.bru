@@ -1,0 +1,32 @@
+meta {
+  name: Update API
+  type: http
+  seq: 4
+}
+
+put {
+  url: {{registry_url}}/api/v1/apis/{{api_id}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "description": "Updated description for pet store API",
+    "tags": ["pets", "demo", "updated"]
+  }
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

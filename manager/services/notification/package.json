@@ -1,0 +1,34 @@
+{
+  "name": "@xcloudapim/notification-service",
+  "version": "1.0.0",
+  "description": "xCloudAPIM Notification Service — Email / Webhook / In-App",
+  "type": "module",
+  "main": "dist/app.js",
+  "scripts": {
+    "build":     "tsc -p tsconfig.json",
+    "start":     "node --enable-source-maps dist/app.js",
+    "dev":       "tsx watch src/app.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "fastify":               "^4.27.0",
+    "@fastify/helmet":       "^11.1.1",
+    "kafkajs":               "^2.2.4",
+    "ioredis":               "^5.3.2",
+    "mongodb":               "^6.6.0",
+    "nodemailer":            "^6.9.13",
+    "handlebars":            "^4.7.8",
+    "undici":                "^6.15.0",
+    "pino":                  "^9.1.0",
+    "prom-client":           "^15.1.2",
+    "zod":                   "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/nodemailer": "^6.4.15",
+    "@types/handlebars": "^4.1.0",
+    "@types/node":       "^20.12.0",
+    "tsx":               "^4.10.5",
+    "typescript":        "^5.4.5"
+  },
+  "engines": { "node": ">=20.0.0" }
+}

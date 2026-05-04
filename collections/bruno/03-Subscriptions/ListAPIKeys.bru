@@ -1,0 +1,21 @@
+meta {
+  name: List API Keys
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{subscription_url}}/api/v1/subscriptions/{{subscription_id}}/keys
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+}

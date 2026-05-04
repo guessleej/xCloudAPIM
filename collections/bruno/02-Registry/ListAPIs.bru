@@ -1,0 +1,24 @@
+meta {
+  name: List APIs
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{registry_url}}/api/v1/apis?page=1&pageSize=20
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+tests {
+  test("status 200", function() {
+    expect(res.status).to.equal(200);
+  });
+  test("has nodes array", function() {
+    expect(res.body.data.nodes).to.be.an("array");
+  });
+}

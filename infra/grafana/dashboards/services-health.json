@@ -1,0 +1,150 @@
+{
+  "__inputs": [],
+  "__requires": [
+    { "type": "grafana", "id": "grafana", "name": "Grafana", "version": "10.0.0" },
+    { "type": "datasource", "id": "prometheus", "name": "Prometheus", "version": "1.0.0" }
+  ],
+  "description": "All xCloudAPIM services — uptime, error rate, latency, resource usage",
+  "editable": true,
+  "graphTooltip": 1,
+  "id": null,
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "red",    "value": null },
+            { "color": "green",  "value": 1 }
+          ]},
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation":   "horizontal",
+        "textMode":      "value_and_name",
+        "colorMode":     "background",
+        "graphMode":     "none"
+      },
+      "title": "Service Status",
+      "type": "stat",
+      "targets": [
+        { "expr": "up{job=\"gateway\"}",              "legendFormat": "Gateway",             "refId": "A" },
+        { "expr": "up{job=\"auth-service\"}",         "legendFormat": "Auth",                "refId": "B" },
+        { "expr": "up{job=\"registry-service\"}",     "legendFormat": "Registry",            "refId": "C" },
+        { "expr": "up{job=\"policy-engine\"}",        "legendFormat": "Policy Engine",       "refId": "D" },
+        { "expr": "up{job=\"subscription-service\"}", "legendFormat": "Subscription",        "refId": "E" },
+        { "expr": "up{job=\"analytics-service\"}",    "legendFormat": "Analytics",           "refId": "F" },
+        { "expr": "up{job=\"notification-service\"}", "legendFormat": "Notification",        "refId": "G" },
+        { "expr": "up{job=\"bff\"}",                  "legendFormat": "BFF",                 "refId": "H" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "palette-classic" },
+        "custom": { "lineWidth": 2 } }},
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 2,
+      "title": "Request Rate by Service",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"gateway\"}[1m]))",              "legendFormat": "Gateway",       "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{job=\"auth-service\"}[1m]))",         "legendFormat": "Auth",          "refId": "B" },
+        { "expr": "sum(rate(http_requests_total{job=\"registry-service\"}[1m]))",     "legendFormat": "Registry",      "refId": "C" },
+        { "expr": "sum(rate(http_requests_total{job=\"subscription-service\"}[1m]))", "legendFormat": "Subscription",  "refId": "D" },
+        { "expr": "sum(rate(http_requests_total{job=\"bff\"}[1m]))",                  "legendFormat": "BFF",           "refId": "E" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "s", "color": { "mode": "palette-classic" },
+        "custom": { "lineWidth": 2 } }},
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 3,
+      "title": "P99 Latency by Service",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"gateway\"}[5m])) by (le))",              "legendFormat": "Gateway",      "refId": "A" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"auth-service\"}[5m])) by (le))",         "legendFormat": "Auth",         "refId": "B" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"registry-service\"}[5m])) by (le))",     "legendFormat": "Registry",     "refId": "C" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"policy-engine\"}[5m])) by (le))",        "legendFormat": "Policy",       "refId": "D" },
+        { "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"bff\"}[5m])) by (le))",                  "legendFormat": "BFF",          "refId": "E" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "percentunit", "color": { "mode": "palette-classic" },
+        "custom": { "lineWidth": 2 } }},
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "id": 4,
+      "title": "Error Rate by Service",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(http_requests_total{job=\"gateway\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"gateway\"}[5m]))",              "legendFormat": "Gateway",      "refId": "A" },
+        { "expr": "sum(rate(http_requests_total{job=\"auth-service\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"auth-service\"}[5m]))",   "legendFormat": "Auth",         "refId": "B" },
+        { "expr": "sum(rate(http_requests_total{job=\"registry-service\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"registry-service\"}[5m]))", "legendFormat": "Registry", "refId": "C" },
+        { "expr": "sum(rate(http_requests_total{job=\"bff\",status=~\"5..\"}[5m])) / sum(rate(http_requests_total{job=\"bff\"}[5m]))",                     "legendFormat": "BFF",          "refId": "D" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "bytes", "color": { "mode": "palette-classic" },
+        "custom": { "lineWidth": 2 } }},
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "id": 5,
+      "title": "Heap Memory Usage",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "nodejs_heap_size_used_bytes{job=\"gateway\"}",  "legendFormat": "Gateway",  "refId": "A" },
+        { "expr": "nodejs_heap_size_used_bytes{job=\"bff\"}",      "legendFormat": "BFF",      "refId": "B" },
+        { "expr": "go_memstats_heap_inuse_bytes{job=\"auth-service\"}",         "legendFormat": "Auth",         "refId": "C" },
+        { "expr": "go_memstats_heap_inuse_bytes{job=\"registry-service\"}",     "legendFormat": "Registry",     "refId": "D" },
+        { "expr": "go_memstats_heap_inuse_bytes{job=\"policy-engine\"}",        "legendFormat": "Policy",       "refId": "E" },
+        { "expr": "go_memstats_heap_inuse_bytes{job=\"subscription-service\"}", "legendFormat": "Subscription", "refId": "F" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" },
+        "custom": { "lineWidth": 2 } }},
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "id": 6,
+      "title": "Active Database Connections",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "pg_stat_activity_count{datname=\"apim\",state=\"active\"}", "legendFormat": "PG Active",  "refId": "A" },
+        { "expr": "pg_stat_activity_count{datname=\"apim\",state=\"idle\"}",   "legendFormat": "PG Idle",    "refId": "B" },
+        { "expr": "redis_connected_clients",                                    "legendFormat": "Redis Conn", "refId": "C" }
+      ]
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "palette-classic" },
+        "custom": { "lineWidth": 2 } }},
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 22 },
+      "id": 7,
+      "title": "Policy Engine — Eval Rate & Cache Hits",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "sum(rate(policy_evaluations_total[1m]))",       "legendFormat": "Eval/s",       "refId": "A" },
+        { "expr": "sum(rate(policy_cache_hits_total[1m]))",        "legendFormat": "Cache Hit/s",  "refId": "B" },
+        { "expr": "sum(rate(policy_cache_misses_total[1m]))",      "legendFormat": "Cache Miss/s", "refId": "C" }
+      ]
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["services", "health", "apim"],
+  "time": { "from": "now-1h", "to": "now" },
+  "timezone": "browser",
+  "title": "Services Health",
+  "uid": "apim-services-health",
+  "version": 1
+}

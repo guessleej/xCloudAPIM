@@ -1,0 +1,93 @@
+global:
+  resolve_timeout:  5m
+  smtp_smarthost:   'mailhog:1025'
+  smtp_from:        'alertmanager@apim.local'
+  smtp_require_tls: false
+
+# ─── Routing tree ────────────────────────────────────────────
+route:
+  receiver:        default
+  group_by:        ['alertname', 'team', 'severity']
+  group_wait:      30s
+  group_interval:  5m
+  repeat_interval: 4h
+
+  routes:
+    # Critical alerts — immediate, all channels
+    - match:
+        severity: critical
+      receiver: critical
+      group_wait:   10s
+      repeat_interval: 1h
+
+    # Security alerts — security team
+    - match:
+        team: security
+      receiver: security-team
+      repeat_interval: 2h
+
+    # DBA alerts
+    - match:
+        team: dba
+      receiver: dba-team
+      repeat_interval: 2h
+
+    # Ops / infra
+    - match:
+        team: ops
+      receiver: ops-team
+
+# ─── Receivers ───────────────────────────────────────────────
+receivers:
+
+  - name: default
+    email_configs:
+      - to:           'platform@apim.local'
+        send_resolved: true
+        headers:
+          Subject: '[{{ .Status | toUpper }}] {{ .GroupLabels.alertname }}'
+        html: |
+          {{ range .Alerts }}
+          <b>{{ .Labels.alertname }}</b><br>
+          <b>Severity:</b> {{ .Labels.severity }}<br>
+          <b>Summary:</b> {{ .Annotations.summary }}<br>
+          <b>Description:</b> {{ .Annotations.description }}<br>
+          <hr>
+          {{ end }}
+
+  - name: critical
+    email_configs:
+      - to:           'oncall@apim.local'
+        send_resolved: true
+        headers:
+          Subject: '[CRITICAL] {{ .GroupLabels.alertname }} — Immediate Action Required'
+
+  - name: security-team
+    email_configs:
+      - to: 'security@apim.local'
+        send_resolved: true
+
+  - name: dba-team
+    email_configs:
+      - to: 'dba@apim.local'
+        send_resolved: true
+
+  - name: ops-team
+    email_configs:
+      - to: 'ops@apim.local'
+        send_resolved: true
+
+# ─── Inhibition rules ────────────────────────────────────────
+inhibit_rules:
+  # When a service is completely down, suppress its latency/error-rate alerts
+  - source_match:
+      alertname: ServiceDown
+    target_match_re:
+      alertname: '.*(HighErrorRate|HighLatency).*'
+    equal: ['job']
+
+  - source_match:
+      alertname: GatewayDown
+    target_match_re:
+      alertname: 'Gateway.*'
+    equal: ['instance']

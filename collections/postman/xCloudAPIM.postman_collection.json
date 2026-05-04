@@ -1,0 +1,505 @@
+{
+  "info": {
+    "_postman_id": "xcloudapim-v1",
+    "name": "xCloudAPIM",
+    "description": "xCloudAPIM API collection — Auth, Registry, Subscriptions, Policy, Gateway, BFF GraphQL",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",          "value": "http://localhost" },
+    { "key": "auth_url",          "value": "http://localhost:8081" },
+    { "key": "gateway_url",       "value": "http://localhost:8090" },
+    { "key": "bff_url",           "value": "http://localhost:4000" },
+    { "key": "registry_url",      "value": "http://localhost:8082" },
+    { "key": "subscription_url",  "value": "http://localhost:8084" },
+    { "key": "access_token",      "value": "" },
+    { "key": "refresh_token",     "value": "" },
+    { "key": "api_key",           "value": "" },
+    { "key": "api_id",            "value": "" },
+    { "key": "plan_id",           "value": "" },
+    { "key": "subscription_id",   "value": "" }
+  ],
+  "item": [
+    {
+      "name": "01 - Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_url}}/api/v1/auth/register", "host": ["{{auth_url}}"], "path": ["api","v1","auth","register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"P@ssword123!\",\n  \"name\": \"Test Developer\",\n  \"organizationName\": \"Test Org\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.test('Has userId', () => pm.expect(pm.response.json().data.userId).to.be.a('string'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_url}}/api/v1/auth/login", "host": ["{{auth_url}}"], "path": ["api","v1","auth","login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"dev@example.com\",\n  \"password\": \"P@ssword123!\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('access_token',  body.data.accessToken);",
+              "pm.collectionVariables.set('refresh_token', body.data.refreshToken);"
+            ]}
+          }]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{auth_url}}/api/v1/auth/refresh", "host": ["{{auth_url}}"], "path": ["api","v1","auth","refresh"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "pm.collectionVariables.set('access_token',  body.data.accessToken);",
+              "pm.collectionVariables.set('refresh_token', body.data.refreshToken);"
+            ]}
+          }]
+        },
+        {
+          "name": "JWKS (Public Keys)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{auth_url}}/oauth2/jwks", "host": ["{{auth_url}}"], "path": ["oauth2","jwks"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has keys', () => pm.expect(pm.response.json().keys).to.be.an('array'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{auth_url}}/api/v1/auth/me", "host": ["{{auth_url}}"], "path": ["api","v1","auth","me"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "02 - Registry",
+      "item": [
+        {
+          "name": "List APIs",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{registry_url}}/api/v1/apis?page=1&pageSize=20",
+              "host": ["{{registry_url}}"],
+              "path": ["api","v1","apis"],
+              "query": [{"key": "page","value": "1"}, {"key": "pageSize","value": "20"}]
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Create API",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{registry_url}}/api/v1/apis", "host": ["{{registry_url}}"], "path": ["api","v1","apis"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pet Store API\",\n  \"version\": \"1.0.0\",\n  \"basePath\": \"/petstore/v1\",\n  \"upstreamUrl\": \"http://upstream-petstore:3000\",\n  \"description\": \"A sample pet store API\",\n  \"tags\": [\"pets\",\"demo\"],\n  \"status\": \"ACTIVE\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('api_id', pm.response.json().data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Get API",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{registry_url}}/api/v1/apis/{{api_id}}", "host": ["{{registry_url}}"], "path": ["api","v1","apis","{{api_id}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Update API",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{registry_url}}/api/v1/apis/{{api_id}}", "host": ["{{registry_url}}"], "path": ["api","v1","apis","{{api_id}}"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated description\",\n  \"tags\": [\"pets\",\"demo\",\"updated\"]\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Get OpenAPI Spec",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{registry_url}}/apis/{{api_id}}/spec", "host": ["{{registry_url}}"], "path": ["apis","{{api_id}}","spec"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Delete API",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{registry_url}}/api/v1/apis/{{api_id}}", "host": ["{{registry_url}}"], "path": ["api","v1","apis","{{api_id}}"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 204', () => pm.response.to.have.status(204));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "03 - Subscriptions",
+      "item": [
+        {
+          "name": "List Plans for API",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{subscription_url}}/api/v1/apis/{{api_id}}/plans", "host": ["{{subscription_url}}"], "path": ["api","v1","apis","{{api_id}}","plans"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        },
+        {
+          "name": "Create Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{subscription_url}}/api/v1/plans", "host": ["{{subscription_url}}"], "path": ["api","v1","plans"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"apiId\": \"{{api_id}}\",\n  \"name\": \"Free Tier\",\n  \"rateLimit\": {\"requests\":100,\"window\":\"day\"},\n  \"price\": 0,\n  \"currency\": \"USD\"\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('plan_id', pm.response.json().data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Subscribe to Plan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{subscription_url}}/api/v1/subscriptions", "host": ["{{subscription_url}}"], "path": ["api","v1","subscriptions"] },
+            "body": { "mode": "raw", "raw": "{\n  \"planId\": \"{{plan_id}}\"\n}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('subscription_id', pm.response.json().data.id);"
+            ]}
+          }]
+        },
+        {
+          "name": "Create API Key",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{subscription_url}}/api/v1/subscriptions/{{subscription_id}}/keys", "host": ["{{subscription_url}}"], "path": ["api","v1","subscriptions","{{subscription_id}}","keys"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Dev Key\"\n}" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "pm.collectionVariables.set('api_key', pm.response.json().data.key);"
+            ]}
+          }]
+        },
+        {
+          "name": "List API Keys",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{subscription_url}}/api/v1/subscriptions/{{subscription_id}}/keys", "host": ["{{subscription_url}}"], "path": ["api","v1","subscriptions","{{subscription_id}}","keys"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "04 - Policy",
+      "item": [
+        {
+          "name": "Get Policy Chain",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{registry_url}}/api/v1/apis/{{api_id}}/policy-chain", "host": ["{{registry_url}}"], "path": ["api","v1","apis","{{api_id}}","policy-chain"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200 or 404', () => pm.expect([200,404]).to.include(pm.response.code));"] }
+          }]
+        },
+        {
+          "name": "Save Policy Chain",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{registry_url}}/api/v1/apis/{{api_id}}/policy-chain", "host": ["{{registry_url}}"], "path": ["api","v1","apis","{{api_id}}","policy-chain"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": 1,\n  \"policies\": [\n    {\n      \"id\": \"jwt-auth-1\",\n      \"type\": \"jwt_auth\",\n      \"phase\": \"PRE_REQUEST\",\n      \"enabled\": true,\n      \"order\": 0,\n      \"config\": {\"methods\": \"jwt\"}\n    },\n    {\n      \"id\": \"rate-limit-1\",\n      \"type\": \"rate_limit\",\n      \"phase\": \"PRE_REQUEST\",\n      \"enabled\": true,\n      \"order\": 1,\n      \"config\": {\"requests\": 1000, \"window\": \"minute\", \"key\": \"sub\"}\n    }\n  ]\n}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200 or 201', () => pm.expect([200,201]).to.include(pm.response.code));"] }
+          }]
+        },
+        {
+          "name": "Publish Policy Chain",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "{{registry_url}}/api/v1/apis/{{api_id}}/policy-chain/publish", "host": ["{{registry_url}}"], "path": ["api","v1","apis","{{api_id}}","policy-chain","publish"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200 or 202', () => pm.expect([200,202]).to.include(pm.response.code));"] }
+          }]
+        },
+        {
+          "name": "List Plugins",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": { "raw": "http://localhost:8083/api/v1/plugins", "raw": "http://localhost:8083/api/v1/plugins" }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "05 - Gateway",
+      "item": [
+        {
+          "name": "Healthcheck",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{gateway_url}}/healthz", "host": ["{{gateway_url}}"], "path": ["healthz"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status ok', () => pm.expect(pm.response.json().status).to.equal('ok'));"
+            ]}
+          }]
+        },
+        {
+          "name": "Proxy (API Key)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-API-Key", "value": "{{api_key}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": { "raw": "{{gateway_url}}/petstore/v1/pets", "host": ["{{gateway_url}}"], "path": ["petstore","v1","pets"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Not 401/403', () => pm.expect([401,403]).to.not.include(pm.response.code));"] }
+          }]
+        },
+        {
+          "name": "Proxy (JWT)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{access_token}}" },
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": { "raw": "{{gateway_url}}/petstore/v1/pets", "host": ["{{gateway_url}}"], "path": ["petstore","v1","pets"] }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": ["pm.test('Not 401/403', () => pm.expect([401,403]).to.not.include(pm.response.code));"] }
+          }]
+        }
+      ]
+    },
+    {
+      "name": "06 - BFF GraphQL",
+      "item": [
+        {
+          "name": "Login (GQL)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{bff_url}}/graphql", "host": ["{{bff_url}}"], "path": ["graphql"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"mutation Login($email:String!,$password:String!){login(email:$email,password:$password){accessToken refreshToken user{id email name role}}}\",\"variables\":{\"email\":\"dev@example.com\",\"password\":\"P@ssword123!\"}}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "const body = pm.response.json();",
+              "if (!body.errors) {",
+              "  pm.collectionVariables.set('access_token',  body.data.login.accessToken);",
+              "  pm.collectionVariables.set('refresh_token', body.data.login.refreshToken);",
+              "}"
+            ]}
+          }]
+        },
+        {
+          "name": "List APIs (GQL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{bff_url}}/graphql", "host": ["{{bff_url}}"], "path": ["graphql"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"query GetAPIs($page:Int,$pageSize:Int){apis(page:$page,pageSize:$pageSize){nodes{id name version basePath status chainId}total page pageSize}}\",\"variables\":{\"page\":1,\"pageSize\":20}}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('No errors', () => pm.expect(pm.response.json().errors).to.be.undefined);"
+            ]}
+          }]
+        },
+        {
+          "name": "Get API Detail (GQL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{bff_url}}/graphql", "host": ["{{bff_url}}"], "path": ["graphql"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"query GetAPI($id:ID!){api(id:$id){id name version basePath status description tags policyChain{chainId version policies{id type phase enabled order}}plans{id name rateLimit{requests window}}}}\",\"variables\":{\"id\":\"{{api_id}}\"}}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('No errors', () => pm.expect(pm.response.json().errors).to.be.undefined);"
+            ]}
+          }]
+        },
+        {
+          "name": "Dashboard Stats (GQL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "url": { "raw": "{{bff_url}}/graphql", "host": ["{{bff_url}}"], "path": ["graphql"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"query{dashboardStats{totalAPIs activeAPIs totalSubscriptions activeSubscriptions requestsToday errorsToday p99LatencyMs}}\"}"
+            }
+          },
+          "event": [{
+            "listen": "test",
+            "script": { "exec": [
+              "pm.test('Status 200', () => pm.response.to.have.status(200));",
+              "pm.test('No errors', () => pm.expect(pm.response.json().errors).to.be.undefined);"
+            ]}
+          }]
+        }
+      ]
+    }
+  ]
+}
