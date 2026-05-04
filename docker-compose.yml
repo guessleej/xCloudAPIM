@@ -390,7 +390,7 @@ services:
   vault-init:
     image: hashicorp/vault:1.15
     container_name: apim-vault-init
-    entrypoint: ["sh", "/scripts/init-vault.sh"]
+    entrypoint: ["sh", "-c", "apk add --no-cache openssl 2>/dev/null; sh /scripts/init-vault.sh"]
     environment:
       VAULT_ADDR:     http://vault:8200
       VAULT_TOKEN:    ${VAULT_TOKEN:-dev-root-token}
@@ -939,13 +939,21 @@ services:
     environment:
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8081
-      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
-      REDIS_ADDR:         redis-master-1:6379
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis-master-1
+      REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
       JWT_SECRET:         ${JWT_SECRET:-change-me-jwt-secret-32chars-min!!}
       JWT_ACCESS_TTL:     ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL:    ${JWT_REFRESH_TTL:-168h}
       OAUTH2_ISSUER:      ${OAUTH2_ISSUER:-http://localhost/api/auth}
+      VAULT_ADDR:         http://vault:8200
+      VAULT_TOKEN:        ${VAULT_TOKEN:-dev-root-token}
       SMTP_HOST:          mailhog
       SMTP_PORT:          1025
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
@@ -960,7 +968,7 @@ services:
       flyway:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
       interval: 15s
       timeout: 5s
       start_period: 15s
@@ -994,8 +1002,14 @@ services:
     environment:
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8082
-      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
-      REDIS_ADDR:         redis-master-1:6379
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis-master-1
+      REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
       MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin
       ES_ADDRESSES:       http://elasticsearch:9200
@@ -1016,7 +1030,7 @@ services:
       flyway:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8082/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/health"]
       interval: 15s
       timeout: 5s
       start_period: 15s
@@ -1050,8 +1064,14 @@ services:
     environment:
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8083
-      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
-      REDIS_ADDR:         redis-master-1:6379
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis-master-1
+      REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
@@ -1104,9 +1124,16 @@ services:
     environment:
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8084
-      DB_DSN:             postgres://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
-      REDIS_ADDR:         redis-master-1:6379
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis-master-1
+      REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_DB:           0
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
       AUTH_SERVICE_URL:   http://auth-service:8081
