@@ -18,7 +18,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.28.0.0/16
 
 volumes:
   postgres-data:
@@ -54,7 +54,7 @@ services:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/postgres-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
     ports:
-      - "5432:5432"
+      - "15433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-apim_user} -d ${POSTGRES_DB:-apim}"]
       interval: 10s
@@ -63,7 +63,7 @@ services:
       start_period: 30s
     networks:
       apim-net:
-        ipv4_address: 172.20.0.10
+        ipv4_address: 172.28.0.10
     logging: *default-logging
 
   pgadmin:
@@ -84,7 +84,7 @@ services:
         condition: service_healthy
     networks:
       apim-net:
-        ipv4_address: 172.20.0.11
+        ipv4_address: 172.28.0.11
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ services:
     volumes:
       - redis-master1-data:/data
     ports:
-      - "6379:6379"
+      - "16379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
       interval: 10s
@@ -114,7 +114,7 @@ services:
       retries: 5
     networks:
       apim-net:
-        ipv4_address: 172.20.0.20
+        ipv4_address: 172.28.0.20
 
   redis-master-2:
     image: redis:7-alpine
@@ -140,7 +140,7 @@ services:
       retries: 5
     networks:
       apim-net:
-        ipv4_address: 172.20.0.21
+        ipv4_address: 172.28.0.21
 
   redis-master-3:
     image: redis:7-alpine
@@ -158,7 +158,7 @@ services:
     volumes:
       - redis-master3-data:/data
     ports:
-      - "6381:6379"
+      - "16381:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
       interval: 10s
@@ -166,7 +166,7 @@ services:
       retries: 5
     networks:
       apim-net:
-        ipv4_address: 172.20.0.22
+        ipv4_address: 172.28.0.22
 
   redis-replica-1:
     image: redis:7-alpine
@@ -185,7 +185,7 @@ services:
       - "6382:6379"
     networks:
       apim-net:
-        ipv4_address: 172.20.0.23
+        ipv4_address: 172.28.0.23
 
   redis-replica-2:
     image: redis:7-alpine
@@ -204,7 +204,7 @@ services:
       - "6383:6379"
     networks:
       apim-net:
-        ipv4_address: 172.20.0.24
+        ipv4_address: 172.28.0.24
 
   redis-replica-3:
     image: redis:7-alpine
@@ -223,7 +223,7 @@ services:
       - "6384:6379"
     networks:
       apim-net:
-        ipv4_address: 172.20.0.25
+        ipv4_address: 172.28.0.25
 
   redis-cluster-init:
     image: redis:7-alpine
@@ -233,12 +233,12 @@ services:
         sleep 5 &&
         redis-cli -a ${REDIS_PASSWORD:-redis_pass_dev}
           --cluster create
-          172.20.0.20:6379
-          172.20.0.21:6379
-          172.20.0.22:6379
-          172.20.0.23:6379
-          172.20.0.24:6379
-          172.20.0.25:6379
+          172.28.0.20:6379
+          172.28.0.21:6379
+          172.28.0.22:6379
+          172.28.0.23:6379
+          172.28.0.24:6379
+          172.28.0.25:6379
           --cluster-replicas 1
           --cluster-yes
       "
@@ -269,13 +269,13 @@ services:
     ports:
       - "2181:2181"
     healthcheck:
-      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep imok"]
+      test: ["CMD-SHELL", "echo srvr | nc -w 2 localhost 2181 | grep -q Mode"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
       apim-net:
-        ipv4_address: 172.20.0.30
+        ipv4_address: 172.28.0.30
     logging: *default-logging
 
   kafka:
@@ -314,7 +314,7 @@ services:
       start_period: 30s
     networks:
       apim-net:
-        ipv4_address: 172.20.0.31
+        ipv4_address: 172.28.0.31
     logging: *default-logging
 
   kafka-init:
@@ -355,7 +355,7 @@ services:
       - "8080:8080"
     networks:
       apim-net:
-        ipv4_address: 172.20.0.32
+        ipv4_address: 172.28.0.32
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -384,7 +384,7 @@ services:
       start_period: 10s
     networks:
       apim-net:
-        ipv4_address: 172.20.0.40
+        ipv4_address: 172.28.0.40
     logging: *default-logging
 
   vault-init:
@@ -432,7 +432,7 @@ services:
       start_period: 20s
     networks:
       apim-net:
-        ipv4_address: 172.20.0.50
+        ipv4_address: 172.28.0.50
     logging: *default-logging
 
   mongo-express:
@@ -445,13 +445,13 @@ services:
       ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/
       ME_CONFIG_BASICAUTH:             false
     ports:
-      - "8081:8081"
+      - "18081:8081"
     depends_on:
       mongodb:
         condition: service_healthy
     networks:
       apim-net:
-        ipv4_address: 172.20.0.51
+        ipv4_address: 172.28.0.51
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -491,7 +491,7 @@ services:
       start_period: 60s
     networks:
       apim-net:
-        ipv4_address: 172.20.0.60
+        ipv4_address: 172.28.0.60
     logging: *default-logging
 
   kibana:
@@ -510,7 +510,7 @@ services:
         condition: service_healthy
     networks:
       apim-net:
-        ipv4_address: 172.20.0.61
+        ipv4_address: 172.28.0.61
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -550,10 +550,10 @@ services:
       - ./infra/prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     ports:
-      - "9090:9090"
+      - "19090:9090"
     networks:
       apim-net:
-        ipv4_address: 172.20.0.70
+        ipv4_address: 172.28.0.70
     logging: *default-logging
 
   grafana:
@@ -575,7 +575,7 @@ services:
       - prometheus
     networks:
       apim-net:
-        ipv4_address: 172.20.0.71
+        ipv4_address: 172.28.0.71
     logging: *default-logging
 
   jaeger:
@@ -592,7 +592,7 @@ services:
       - "14268:14268"   # Jaeger HTTP
     networks:
       apim-net:
-        ipv4_address: 172.20.0.72
+        ipv4_address: 172.28.0.72
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -603,11 +603,11 @@ services:
     <<: *always-restart
     container_name: apim-mailhog
     ports:
-      - "1025:1025"   # SMTP
+      - "11025:1025"   # SMTP
       - "8025:8025"   # Web UI
     networks:
       apim-net:
-        ipv4_address: 172.20.0.80
+        ipv4_address: 172.28.0.80
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -659,7 +659,7 @@ services:
           memory: 512M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.92
+        ipv4_address: 172.28.0.92
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -718,7 +718,7 @@ services:
           memory: 256M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.93
+        ipv4_address: 172.28.0.93
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -756,7 +756,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:          bff
     ports:
-      - "4000:4000"
+      - "14000:4000"
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -778,7 +778,7 @@ services:
           memory: 128M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.91
+        ipv4_address: 172.28.0.91
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -815,7 +815,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:          api-gateway
     ports:
-      - "8090:8080"
+      - "18090:8080"
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -837,7 +837,7 @@ services:
           memory: 256M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.90
+        ipv4_address: 172.28.0.90
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -874,7 +874,7 @@ services:
           memory: 32M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.94
+        ipv4_address: 172.28.0.94
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -920,7 +920,7 @@ services:
           memory: 128M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.95
+        ipv4_address: 172.28.0.95
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -951,7 +951,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:  auth-service
     ports:
-      - "8081:8081"
+      - "18081:8081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -975,7 +975,7 @@ services:
           memory: 64M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.81
+        ipv4_address: 172.28.0.81
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1005,7 +1005,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:  registry-service
     ports:
-      - "8082:8082"
+      - "18082:8082"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1031,7 +1031,7 @@ services:
           memory: 96M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.82
+        ipv4_address: 172.28.0.82
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1059,7 +1059,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:  policy-engine
     ports:
-      - "8083:8083"
+      - "18083:8083"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1085,7 +1085,7 @@ services:
           memory: 128M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.83
+        ipv4_address: 172.28.0.83
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1115,7 +1115,7 @@ services:
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:  subscription-service
     ports:
-      - "8084:8084"
+      - "18084:8084"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1141,7 +1141,7 @@ services:
           memory: 64M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.84
+        ipv4_address: 172.28.0.84
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1155,8 +1155,8 @@ services:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "80:80"
-      - "443:443"
+      - "18000:80"
+      - "18443:443"
     depends_on:
       gateway:
         condition: service_healthy
@@ -1181,7 +1181,7 @@ services:
           memory: 16M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.100
+        ipv4_address: 172.28.0.100
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1198,7 +1198,7 @@ services:
         condition: service_healthy
     networks:
       apim-net:
-        ipv4_address: 172.20.0.110
+        ipv4_address: 172.28.0.110
     logging: *default-logging
 
   redis-exporter:
@@ -1213,7 +1213,7 @@ services:
         condition: service_healthy
     networks:
       apim-net:
-        ipv4_address: 172.20.0.111
+        ipv4_address: 172.28.0.111
     logging: *default-logging
 
   node-exporter:
@@ -1232,7 +1232,7 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       apim-net:
-        ipv4_address: 172.20.0.112
+        ipv4_address: 172.28.0.112
     logging: *default-logging
 
   nginx-exporter:
@@ -1246,7 +1246,7 @@ services:
         condition: service_healthy
     networks:
       apim-net:
-        ipv4_address: 172.20.0.113
+        ipv4_address: 172.28.0.113
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1271,7 +1271,7 @@ services:
       retries: 3
     networks:
       apim-net:
-        ipv4_address: 172.20.0.114
+        ipv4_address: 172.28.0.114
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1289,7 +1289,7 @@ services:
       DOCKER_INFLUXDB_INIT_BUCKET:      k6
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: k6-super-secret-token
     ports:
-      - "8086:8086"
+      - "8087:8086"
     volumes:
       - influxdb-k6-data:/var/lib/influxdb2
     healthcheck:
@@ -1307,5 +1307,5 @@ services:
           memory: 128M
     networks:
       apim-net:
-        ipv4_address: 172.20.0.115
+        ipv4_address: 172.28.0.115
     logging: *default-logging
