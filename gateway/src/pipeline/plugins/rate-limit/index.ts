@@ -146,7 +146,7 @@ function resolveKey(ctx: ExecContext, keyBy: string): string {
     case 'user_id':
       return (ctx.claims['sub'] as string | undefined) ?? ctx.remoteIp
     case 'api_key':
-      return ctx.requestHeaders['x-api-key'] ?? ctx.clientId || ctx.remoteIp
+      return (ctx.requestHeaders['x-api-key'] ?? ctx.clientId) || ctx.remoteIp
     default:   // client_id
       return ctx.clientId || ctx.remoteIp
   }

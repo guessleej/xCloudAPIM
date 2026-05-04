@@ -2,7 +2,7 @@
 FROM node:20.14.0-alpine3.19 AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # ── Stage 2: builder ──────────────────────────────────────────
 FROM node:20.14.0-alpine3.19 AS builder

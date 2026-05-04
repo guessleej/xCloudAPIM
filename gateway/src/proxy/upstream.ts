@@ -1,4 +1,4 @@
-import { fetch, ProxyAgent, type RequestInit, type Response } from 'undici'
+import { fetch, Agent, type RequestInit, type Response } from 'undici'
 import { config } from '../config/index.js'
 import type { RouteEntry } from './route-table.js'
 
@@ -17,7 +17,7 @@ export interface UpstreamResponse {
 }
 
 // 全域 keep-alive agent（減少 TCP 建立開銷）
-const agent = new ProxyAgent({
+const agent = new Agent({
   connections:      256,
   pipelining:       1,
   keepAliveTimeout: config.PROXY_KEEP_ALIVE_TIMEOUT_MS,

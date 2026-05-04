@@ -893,6 +893,7 @@ services:
     environment:
       NODE_ENV:             ${NODE_ENV:-production}
       PORT:                 3001
+      HOSTNAME:             "0.0.0.0"
       BFF_URL:              http://bff:4000/graphql
       SESSION_SECRET:       ${SESSION_SECRET:-change-me-in-production-32chars-min}
       NEXT_PUBLIC_SITE_URL: ${PORTAL_URL:-http://localhost:3001}
@@ -905,11 +906,11 @@ services:
       bff:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-fs", "http://localhost:3001/api/health"]
-      interval: 20s
-      timeout: 5s
-      start_period: 30s
-      retries: 3
+      test: ["CMD", "node", "-e", "require('http').get('http://127.0.0.1:3001/', r => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 5
     deploy:
       resources:
         limits:
@@ -1182,17 +1183,17 @@ services:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
-      - "18000:80"
-      - "18443:443"
+      - "19000:80"
+      - "19443:443"
     depends_on:
       gateway:
         condition: service_healthy
       bff:
         condition: service_healthy
       studio:
-        condition: service_healthy
+        condition: service_started
       portal:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s

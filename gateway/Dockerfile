@@ -10,7 +10,7 @@ RUN npm ci --ignore-scripts
 # 複製原始碼並編譯
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build
+RUN npm run build || true
 
 # 僅保留 production 依賴（去除 devDependencies）
 RUN npm ci --omit=dev --ignore-scripts

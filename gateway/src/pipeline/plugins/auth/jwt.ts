@@ -12,7 +12,8 @@
  *   cookie_name    = "access_token"                 (token_source=cookie 時)
  *   forward_claims = "sub,email,plan" | "*"         (轉注 claims 為 X-Claim-* header)
  */
-import { createRemoteJWKSet, jwtVerify, createSecretKey } from 'jose'
+import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { createSecretKey } from 'crypto'
 import type { ExecContext, PluginDeps } from '../../types.js'
 import { applyIdentity, forwardClaims, extractScopes } from './claims.js'
 import { config as appConfig } from '../../../config/index.js'

@@ -21,7 +21,8 @@
     "zustand":              "^4.5.2",
     "zod":                  "^3.23.8",
     "@hookform/resolvers":  "^3.4.2",
-    "clsx":                 "^2.1.1"
+    "clsx":                 "^2.1.1",
+    "immer":                "^10.1.1"
   },
   "devDependencies": {
     "@types/react":         "^18.3.3",
