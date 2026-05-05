@@ -45,19 +45,17 @@ func (h *Handlers) Authorize(c *gin.Context) {
 		return
 	}
 
-	// 在真實環境中，這裡應該先確認使用者已登入
-	// 開發環境：從 Query 取 user_id（正式環境改為 Session/Cookie）
-	userIDStr := c.Query("user_id")
-	if userIDStr == "" {
-		// 重定向到登入頁
+	// 由 requireSession middleware 注入，確保使用者已通過 POST /auth/login 認證
+	userIDStr, exists := c.Get("session_user_id")
+	if !exists {
 		loginURL := fmt.Sprintf("/login?redirect=%s", url.QueryEscape(c.Request.RequestURI))
 		c.Redirect(http.StatusFound, loginURL)
 		return
 	}
 
-	userID, err := uuid.Parse(userIDStr)
+	userID, err := uuid.Parse(userIDStr.(string))
 	if err != nil {
-		redirectWithError(c, req.RedirectURI, req.State, "invalid_request", "invalid user_id")
+		redirectWithError(c, req.RedirectURI, req.State, "server_error", "internal server error")
 		return
 	}
 

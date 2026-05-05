@@ -2,6 +2,8 @@ package handler
 
 import (
 	"net/http"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,14 +15,30 @@ import (
 )
 
 type Handlers struct {
-	authService *service.AuthService
-	db          *repository.DB
-	redisCache  *cache.RedisCache
-	logger      *zap.Logger
+	authService    *service.AuthService
+	sessionService *service.SessionService
+	rateLimitStore service.RateLimitStore
+	db             *repository.DB
+	redisCache     *cache.RedisCache
+	logger         *zap.Logger
 }
 
-func NewHandlers(authService *service.AuthService, db *repository.DB, redisCache *cache.RedisCache, logger *zap.Logger) *Handlers {
-	return &Handlers{authService: authService, db: db, redisCache: redisCache, logger: logger}
+func NewHandlers(
+	authService    *service.AuthService,
+	sessionService *service.SessionService,
+	rateLimitStore service.RateLimitStore,
+	db             *repository.DB,
+	redisCache     *cache.RedisCache,
+	logger         *zap.Logger,
+) *Handlers {
+	return &Handlers{
+		authService:    authService,
+		sessionService: sessionService,
+		rateLimitStore: rateLimitStore,
+		db:             db,
+		redisCache:     redisCache,
+		logger:         logger,
+	}
 }
 
 func SetupRouter(h *Handlers, env string) *gin.Engine {
@@ -29,8 +47,6 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 	}
 
 	r := gin.New()
-
-	// ─── Middleware ───────────────────────────────────────────
 	r.Use(gin.Recovery())
 	r.Use(requestLogger(h.logger))
 	r.Use(securityHeaders())
@@ -41,17 +57,26 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 	r.GET("/ready",   h.Ready)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
+	// ─── 使用者登入端點（rate limit: 10 req/min/IP）────────────
+	auth := r.Group("/auth")
+	{
+		auth.POST("/login",  rateLimitMiddleware(h.rateLimitStore, 10, "rl:login"), h.Login)
+		auth.POST("/logout", h.requireSession(), h.Logout)
+		auth.GET( "/me",     h.requireSession(), h.Me)
+	}
+
 	// ─── OAuth2 Endpoints ─────────────────────────────────────
 	oauth := r.Group("/oauth2")
 	{
-		oauth.GET( "/authorize", h.Authorize)   // Authorization Code + PKCE
-		oauth.POST("/token",     h.Token)        // Token 端點（多 Grant Types）
-		oauth.POST("/revoke",    h.Revoke)       // Token 撤銷（RFC 7009）
-		oauth.GET( "/jwks",      h.JWKS)         // 公鑰 JWKS
-		oauth.GET( "/.well-known/openid-configuration", h.OpenIDConfig) // OIDC Discovery
+		// authorize 需要已登入的 session token
+		oauth.GET("/authorize", h.requireSession(), h.Authorize)
+		// token/revoke: rate limit 20 req/min/IP
+		oauth.POST("/token",  rateLimitMiddleware(h.rateLimitStore, 20, "rl:token"), h.Token)
+		oauth.POST("/revoke", rateLimitMiddleware(h.rateLimitStore, 20, "rl:token"), h.Revoke)
+		oauth.GET( "/jwks",   h.JWKS)
+		oauth.GET( "/.well-known/openid-configuration", h.OpenIDConfig)
 	}
 
-	// ─── 404 Handler ──────────────────────────────────────────
 	r.NoRoute(func(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "not_found"})
 	})
@@ -81,6 +106,7 @@ func securityHeaders() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
+		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		c.Header("Cache-Control", "no-store")
 		c.Header("Pragma", "no-cache")
 		c.Next()
@@ -88,8 +114,13 @@ func securityHeaders() gin.HandlerFunc {
 }
 
 func corsMiddleware() gin.HandlerFunc {
+	allowedOrigins := buildAllowedOrigins()
 	return func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
+		origin := c.GetHeader("Origin")
+		if origin != "" && isAllowedOrigin(origin, allowedOrigins) {
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+		}
 		c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if c.Request.Method == http.MethodOptions {
@@ -98,4 +129,28 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+func buildAllowedOrigins() []string {
+	raw := os.Getenv("AUTH_CORS_ALLOWED_ORIGINS")
+	if raw == "" {
+		raw = "http://localhost:3001,http://localhost:5173"
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, p := range parts {
+		if s := strings.TrimSpace(p); s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func isAllowedOrigin(origin string, allowed []string) bool {
+	for _, a := range allowed {
+		if a == origin {
+			return true
+		}
+	}
+	return false
 }

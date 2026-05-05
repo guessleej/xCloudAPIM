@@ -13,10 +13,20 @@ import { config }     from './config/index.js'
 import type { Logger } from 'pino'
 import type { BffContext } from './context.js'
 
+const allowedOrigins = (process.env['BFF_CORS_ORIGINS'] ?? 'http://localhost:5173,http://localhost:3001')
+  .split(',').map(o => o.trim()).filter(Boolean)
+
 export async function buildServer(log: Logger): Promise<http.Server> {
   const app = express()
-  app.use(cors({ origin: true, credentials: true }))
-  app.use(express.json({ limit: '2mb' }))
+  app.use(cors({
+    origin: (origin, cb) => {
+      // 允許無 origin（server-to-server）或白名單內的來源
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+      cb(new Error(`CORS: origin '${origin}' not allowed`))
+    },
+    credentials: true,
+  }))
+  app.use(express.json({ limit: '1mb' }))
 
   // ─── Health check（不走 GraphQL）─────────────────────────────
   app.get('/healthz', (_req, res) => {

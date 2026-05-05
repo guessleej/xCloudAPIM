@@ -187,3 +187,18 @@ func (c *RedisCache) Health(ctx context.Context) error {
 func (c *RedisCache) Close() error {
 	return c.rdb.Close()
 }
+
+// NewClient 複用連線設定，建立指向不同 DB 的獨立 client（用於 rate limit 等隔離需求）
+func (c *RedisCache) NewClient(db int) *redis.Client {
+	opt := c.rdb.Options()
+	return redis.NewClient(&redis.Options{
+		Addr:         opt.Addr,
+		Password:     opt.Password,
+		DB:           db,
+		DialTimeout:  opt.DialTimeout,
+		ReadTimeout:  opt.ReadTimeout,
+		WriteTimeout: opt.WriteTimeout,
+		PoolSize:     5,
+		MinIdleConns: 1,
+	})
+}

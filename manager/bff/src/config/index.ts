@@ -20,7 +20,7 @@ const schema = z.object({
   GRAPHQL_PATH:             z.string().default('/graphql'),
   GRAPHQL_MAX_DEPTH:        z.coerce.number().default(10),
   GRAPHQL_MAX_COMPLEXITY:   z.coerce.number().default(200),
-  INTROSPECTION_ENABLED:    z.string().transform((v) => v !== 'false').default('true'),
+  INTROSPECTION_ENABLED:    z.string().transform((v) => v === 'true').default('false'),
 
   // HTTP client
   UPSTREAM_TIMEOUT_MS:      z.coerce.number().default(10_000),

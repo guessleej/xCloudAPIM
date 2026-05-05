@@ -747,7 +747,7 @@ services:
       JWT_AUDIENCE:               ${JWT_AUDIENCE:-}
       GRAPHQL_PATH:               /graphql
       GRAPHQL_MAX_DEPTH:          10
-      INTROSPECTION_ENABLED:      ${INTROSPECTION_ENABLED:-true}
+      INTROSPECTION_ENABLED:      ${INTROSPECTION_ENABLED:-false}
       UPSTREAM_TIMEOUT_MS:        10000
       REDIS_HOST:                 redis-master-1
       REDIS_PORT:                 6379
@@ -949,10 +949,12 @@ services:
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
-      JWT_SECRET:         ${JWT_SECRET:-change-me-jwt-secret-32chars-min!!}
+      JWT_SECRET:         ${JWT_SECRET:?JWT_SECRET is required}
+      SESSION_SECRET:     ${SESSION_SECRET:?SESSION_SECRET is required (min 32 chars)}
       JWT_ACCESS_TTL:     ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL:    ${JWT_REFRESH_TTL:-168h}
       OAUTH2_ISSUER:      ${OAUTH2_ISSUER:-http://localhost/api/auth}
+      AUTH_CORS_ALLOWED_ORIGINS: ${AUTH_CORS_ALLOWED_ORIGINS:-http://localhost:3001,http://localhost:5173}
       VAULT_ADDR:         http://vault:8200
       VAULT_TOKEN:        ${VAULT_TOKEN:-dev-root-token}
       SMTP_HOST:          mailhog

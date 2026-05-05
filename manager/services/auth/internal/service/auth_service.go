@@ -141,8 +141,11 @@ func (s *AuthService) handleAuthorizationCode(ctx context.Context, req *domain.T
 	if err != nil || codeData == nil {
 		return nil, domain.ErrInvalidGrant("authorization code not found or expired")
 	}
-	// 立即刪除（one-time use）
-	s.redisCache.DeleteAuthCode(ctx, req.Code) //nolint:errcheck
+	// 立即刪除（one-time use）— 刪除失敗直接拒絕，防止重放攻擊
+	if err := s.redisCache.DeleteAuthCode(ctx, req.Code); err != nil {
+		s.logger.Error("failed to delete auth code, rejecting to prevent replay", zap.Error(err))
+		return nil, domain.ErrServerError("authorization code processing failed")
+	}
 
 	// 驗證 Client ID 一致
 	if codeData.ClientID != client.ID.String() {

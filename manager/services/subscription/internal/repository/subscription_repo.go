@@ -116,8 +116,11 @@ func (r *SubscriptionRepo) List(ctx context.Context, f ListSubFilter) ([]*domain
 		return nil, 0, err
 	}
 
+	const maxPageSize = 100
 	if f.Size <= 0 {
 		f.Size = 20
+	} else if f.Size > maxPageSize {
+		f.Size = maxPageSize
 	}
 	if f.Page <= 0 {
 		f.Page = 1

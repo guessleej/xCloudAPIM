@@ -145,10 +145,11 @@ type JWK struct {
 
 // ─── User ─────────────────────────────────────────────────────
 type User struct {
-	ID          uuid.UUID
-	Email       string
-	DisplayName string
-	Active      bool
+	ID           uuid.UUID
+	Email        string
+	DisplayName  string
+	PasswordHash string
+	Active       bool
 }
 
 // ─── Grant Types ─────────────────────────────────────────────

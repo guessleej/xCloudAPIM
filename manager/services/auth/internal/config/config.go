@@ -7,12 +7,14 @@ import (
 	"time"
 )
 
+
 type Config struct {
 	Server   ServerConfig
 	Postgres PostgresConfig
 	Redis    RedisConfig
 	Vault    VaultConfig
 	JWT      JWTConfig
+	Session  SessionConfig
 	OTEL     OTELConfig
 }
 
@@ -48,6 +50,10 @@ type JWTConfig struct {
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
 	AuthCodeTTL     time.Duration
+}
+
+type SessionConfig struct {
+	Secret string
 }
 
 type OTELConfig struct {
@@ -94,10 +100,19 @@ func Load() (*Config, error) {
 			RefreshTokenTTL: time.Duration(getEnvInt("JWT_REFRESH_TOKEN_TTL", 86400)) * time.Second,
 			AuthCodeTTL:     600 * time.Second,
 		},
+		Session: SessionConfig{
+			Secret: getEnv("SESSION_SECRET", ""),
+		},
 		OTEL: OTELConfig{
 			Endpoint:    getEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318"),
 			ServiceName: getEnv("OTEL_SERVICE_NAME", "auth-service"),
 		},
+	}
+	if cfg.Session.Secret == "" {
+		return nil, fmt.Errorf("SESSION_SECRET is required (min 32 chars)")
+	}
+	if len(cfg.Session.Secret) < 32 {
+		return nil, fmt.Errorf("SESSION_SECRET must be at least 32 characters")
 	}
 	return cfg, nil
 }

@@ -169,8 +169,9 @@ func oauthErrorResponse(c *gin.Context, err error) {
 		c.JSON(oauthErr.HTTPStatus, oauthErr)
 		return
 	}
+	// 不回傳 internal error 細節，防止資訊洩漏
 	c.JSON(http.StatusInternalServerError, gin.H{
 		"error":             "server_error",
-		"error_description": err.Error(),
+		"error_description": "an internal error occurred",
 	})
 }
