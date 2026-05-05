@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
@@ -55,8 +56,8 @@ func NewRouter(
 	v1.GET("/plans",     subH.ListPlans)
 	v1.GET("/plans/:id", subH.GetPlan)
 
-	// ─── Subscriptions ────────────────────────────────────────
-	subs := v1.Group("/subscriptions")
+	// ─── Subscriptions（需要有效 X-Org-ID + X-User-ID）─────────
+	subs := v1.Group("/subscriptions", requireIdentityHeaders())
 	subs.POST("",              subH.Create)
 	subs.GET("",               subH.List)
 	subs.GET("/:id",           subH.Get)
@@ -81,6 +82,30 @@ func NewRouter(
 	internal.GET("/quota/check",          quotaH.Check)
 
 	return r
+}
+
+// requireIdentityHeaders 驗證 Gateway 注入的身份 headers 格式正確
+func requireIdentityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		orgID := c.GetHeader("X-Org-ID")
+		userID := c.GetHeader("X-User-ID")
+		if orgID == "" || userID == "" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "missing identity headers"})
+			c.Abort()
+			return
+		}
+		if _, err := uuid.Parse(orgID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid X-Org-ID format"})
+			c.Abort()
+			return
+		}
+		if _, err := uuid.Parse(userID); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "invalid X-User-ID format"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }
 
 func loggerMiddleware(log *zap.Logger) gin.HandlerFunc {

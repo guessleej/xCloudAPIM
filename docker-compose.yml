@@ -971,11 +971,11 @@ services:
       flyway:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--timeout=4", "-O", "/dev/null", "http://localhost:8081/ready"]
       interval: 15s
       timeout: 5s
-      start_period: 15s
-      retries: 3
+      start_period: 30s
+      retries: 5
     deploy:
       resources:
         limits:

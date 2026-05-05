@@ -109,6 +109,16 @@ func (s *APIService) ListAPIs(ctx context.Context, orgID uuid.UUID, p *domain.AP
 	if p.PageSize < 1 || p.PageSize > 100 {
 		p.PageSize = 20
 	}
+	if len(p.Search) > 200 {
+		return nil, domain.ErrInvalidInput("search query exceeds maximum length of 200 characters")
+	}
+	allowedSortBy := map[string]bool{"created_at": true, "updated_at": true, "name": true}
+	if p.SortBy != "" && !allowedSortBy[p.SortBy] {
+		p.SortBy = "created_at"
+	}
+	if p.SortOrder != "asc" && p.SortOrder != "desc" {
+		p.SortOrder = "desc"
+	}
 	return s.apiRepo.List(ctx, orgID, p)
 }
 
