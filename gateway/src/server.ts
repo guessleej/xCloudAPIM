@@ -37,14 +37,14 @@ export async function buildServer() {
   })
 
   // ─── Health ───────────────────────────────────────────────
-  server.get('/healthz', { schema: { hide: true } }, async (_req, reply) => {
+  server.get('/healthz', { schema: { hide: true } as never }, async (_req, reply) => {
     const redisOk = await server.redis.ping().then(() => true).catch(() => false)
     const status  = redisOk ? 200 : 503
     return reply.code(status).send({ status: redisOk ? 'ok' : 'degraded', routes: getRouteCount() })
   })
 
   // ─── Gateway Catch-all ────────────────────────────────────
-  server.all('/*', { schema: { hide: true } }, async (request, reply) => {
+  server.all('/*', { schema: { hide: true } as never }, async (request, reply) => {
     const startMs = Date.now()
     const method  = request.method
     const host    = (request.headers['host'] as string ?? '').split(':')[0]!

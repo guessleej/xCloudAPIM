@@ -9,7 +9,7 @@
     "strict":          true,
     "esModuleInterop": true,
     "skipLibCheck":    true,
-    "noEmitOnError":   false,
+    "noEmitOnError":   true,
     "sourceMap":       true,
     "declaration":     true,
     "resolveJsonModule": true,

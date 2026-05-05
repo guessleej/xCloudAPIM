@@ -116,7 +116,7 @@ async function checkWindow(
   windowMs:  number,
   windowSec: number,
   limit:     number,
-): Promise<Omit<WindowInfo, 'period'>> {
+): Promise<Omit<WindowInfo, 'period'> & { allowed: boolean }> {
   if (strategy === 'fixed_window') {
     const r = await fixedWindow(deps.redis, `${period}:${key}`, windowSec, limit)
     return {

@@ -125,8 +125,26 @@ func (h *Handlers) Health(c *gin.Context) {
 }
 
 func (h *Handlers) Ready(c *gin.Context) {
-	// TODO: 實際檢查 DB / Redis 連線
-	c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	ctx := c.Request.Context()
+	checks := gin.H{}
+
+	if err := h.db.PingContext(ctx); err != nil {
+		h.logger.Warn("readiness check: postgres ping failed", zap.Error(err))
+		checks["postgres"] = "unhealthy"
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "checks": checks})
+		return
+	}
+	checks["postgres"] = "ok"
+
+	if err := h.redisCache.Health(ctx); err != nil {
+		h.logger.Warn("readiness check: redis ping failed", zap.Error(err))
+		checks["redis"] = "unhealthy"
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "checks": checks})
+		return
+	}
+	checks["redis"] = "ok"
+
+	c.JSON(http.StatusOK, gin.H{"status": "ready", "checks": checks})
 }
 
 // ─── Helpers ─────────────────────────────────────────────────

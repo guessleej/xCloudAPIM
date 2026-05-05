@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -14,6 +16,8 @@ func NewRouter(
 	quotaH  *QuotaHandler,
 	log     *zap.Logger,
 	env     string,
+	db      *sqlx.DB,
+	rdb     *redis.Client,
 ) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -25,6 +29,24 @@ func NewRouter(
 	// ─── Health ───────────────────────────────────────────────
 	r.GET("/healthz", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
+	r.GET("/ready", func(c *gin.Context) {
+		checks := gin.H{}
+		if err := db.PingContext(c.Request.Context()); err != nil {
+			log.Warn("readiness: postgres ping failed", zap.Error(err))
+			checks["postgres"] = "unhealthy"
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "checks": checks})
+			return
+		}
+		checks["postgres"] = "ok"
+		if err := rdb.Ping(c.Request.Context()).Err(); err != nil {
+			log.Warn("readiness: redis ping failed", zap.Error(err))
+			checks["redis"] = "unhealthy"
+			c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "checks": checks})
+			return
+		}
+		checks["redis"] = "ok"
+		c.JSON(http.StatusOK, gin.H{"status": "ready", "checks": checks})
 	})
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 

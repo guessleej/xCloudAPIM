@@ -2,7 +2,7 @@ import Fastify from 'fastify'
 import helmet from '@fastify/helmet'
 import underPressure from '@fastify/under-pressure'
 import { pino } from 'pino'
-import Redis from 'ioredis'
+import { Redis } from 'ioredis'
 import { register as promRegister } from 'prom-client'
 import { config } from './config/index.js'
 import { connectMongo, closeMongo } from './store/mongodb.js'
@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   await startKafkaConsumer(redis, log)
 
   // ─── HTTP server ──────────────────────────────────────────────
-  const app = Fastify({ logger: log })
+  const app = Fastify({ logger: { level: config.NODE_ENV === 'production' ? 'info' : 'debug' } })
   await app.register(helmet, { contentSecurityPolicy: false })
   await app.register(underPressure, { maxEventLoopDelay: 1000, maxEventLoopUtilization: 0.98 })
 

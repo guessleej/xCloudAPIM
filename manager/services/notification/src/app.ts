@@ -13,7 +13,7 @@ async function main(): Promise<void> {
   await connectMongo(log)
   await startKafkaConsumer(log)
 
-  const app = Fastify({ logger: log })
+  const app = Fastify({ logger: { level: config.NODE_ENV === 'production' ? 'info' : 'debug' } })
   await app.register(helmet, { contentSecurityPolicy: false })
 
   app.get('/healthz', async () => ({ status: 'ok', service: config.OTEL_SERVICE_NAME }))

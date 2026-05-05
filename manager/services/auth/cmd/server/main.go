@@ -85,7 +85,7 @@ func main() {
 	)
 
 	// ─── HTTP Server ──────────────────────────────────────────
-	h := handler.NewHandlers(authService, logger)
+	h := handler.NewHandlers(authService, db, redisCache, logger)
 	router := handler.SetupRouter(h, cfg.Server.Environment)
 
 	srv := &http.Server{

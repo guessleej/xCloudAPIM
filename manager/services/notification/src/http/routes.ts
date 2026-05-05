@@ -6,6 +6,7 @@
  * POST /v1/notifications/send   (手動觸發，供管理 UI 或測試使用)
  */
 import type { FastifyInstance } from 'fastify'
+import type { Logger } from 'pino'
 import { getNotificationLogsCol } from '../store/mongodb.js'
 import { sendEmail } from '../channels/email.js'
 import { sendWebhook } from '../channels/webhook.js'
@@ -60,9 +61,9 @@ export function registerRoutes(app: FastifyInstance): void {
     let result: { ok: boolean; error?: string }
 
     if (body.channel === 'email') {
-      result = await sendEmail(body.recipient, body.eventType, data, req.log)
+      result = await sendEmail(body.recipient, body.eventType, data, req.log as unknown as Logger)
     } else if (body.channel === 'webhook') {
-      result = await sendWebhook(body.recipient, body.eventType, data, req.log, body.webhookSecret)
+      result = await sendWebhook(body.recipient, body.eventType, data, req.log as unknown as Logger, body.webhookSecret)
     } else {
       await saveInApp(body.orgId, body.eventType, data)
       result = { ok: true }

@@ -6,17 +6,19 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/xcloudapim/registry-service/internal/repository"
 	"github.com/xcloudapim/registry-service/internal/service"
 	"go.uber.org/zap"
 )
 
 type Handlers struct {
 	apiService *service.APIService
+	db         *repository.DB
 	logger     *zap.Logger
 }
 
-func NewHandlers(apiService *service.APIService, logger *zap.Logger) *Handlers {
-	return &Handlers{apiService: apiService, logger: logger}
+func NewHandlers(apiService *service.APIService, db *repository.DB, logger *zap.Logger) *Handlers {
+	return &Handlers{apiService: apiService, db: db, logger: logger}
 }
 
 func SetupRouter(h *Handlers, env string) *gin.Engine {
@@ -103,5 +105,10 @@ func (h *Handlers) Health(c *gin.Context) {
 }
 
 func (h *Handlers) Ready(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	if err := h.db.PingContext(c.Request.Context()); err != nil {
+		h.logger.Warn("readiness check: postgres ping failed", zap.Error(err))
+		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "not ready", "checks": gin.H{"postgres": "unhealthy"}})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "ready", "checks": gin.H{"postgres": "ok"}})
 }

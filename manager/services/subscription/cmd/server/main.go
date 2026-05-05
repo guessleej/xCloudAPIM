@@ -69,7 +69,7 @@ func main() {
 	subH   := handler.NewSubscriptionHandler(subSvc)
 	keyH   := handler.NewAPIKeyHandler(keySvc)
 	quotaH := handler.NewQuotaHandler(quotaSvc)
-	router := handler.NewRouter(subH, keyH, quotaH, log, cfg.Server.Environment)
+	router := handler.NewRouter(subH, keyH, quotaH, log, cfg.Server.Environment, db, rdb)
 
 	httpSrv := &http.Server{
 		Addr:         ":" + cfg.Server.Port,

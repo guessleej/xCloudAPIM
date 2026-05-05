@@ -6,17 +6,21 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/xcloudapim/auth-service/internal/cache"
+	"github.com/xcloudapim/auth-service/internal/repository"
 	"github.com/xcloudapim/auth-service/internal/service"
 	"go.uber.org/zap"
 )
 
 type Handlers struct {
 	authService *service.AuthService
+	db          *repository.DB
+	redisCache  *cache.RedisCache
 	logger      *zap.Logger
 }
 
-func NewHandlers(authService *service.AuthService, logger *zap.Logger) *Handlers {
-	return &Handlers{authService: authService, logger: logger}
+func NewHandlers(authService *service.AuthService, db *repository.DB, redisCache *cache.RedisCache, logger *zap.Logger) *Handlers {
+	return &Handlers{authService: authService, db: db, redisCache: redisCache, logger: logger}
 }
 
 func SetupRouter(h *Handlers, env string) *gin.Engine {

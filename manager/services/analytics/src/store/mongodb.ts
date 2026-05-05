@@ -6,12 +6,12 @@
  *   metrics_hourly    — 小時級彙整（保留 90 天）
  *   metrics_daily     — 日級彙整（永久保留）
  */
-import { MongoClient, type Db, type Collection } from 'mongodb'
+import { MongoClient, type Db, type Collection, type ObjectId } from 'mongodb'
 import type { Logger } from 'pino'
 import { config } from '../config/index.js'
 
 export interface ApiEvent {
-  _id?:          unknown
+  _id?:          ObjectId
   traceId:       string
   apiId:         string
   clientId:      string
@@ -29,7 +29,7 @@ export interface ApiEvent {
 }
 
 export interface MetricBucket {
-  _id?:          unknown
+  _id?:          ObjectId
   bucketStart:   Date
   bucketType:    'hour' | 'day'
   apiId:         string
@@ -47,7 +47,7 @@ export interface MetricBucket {
 }
 
 export interface QuotaEvent {
-  _id?:      unknown
+  _id?:      ObjectId
   apiId:     string
   clientId:  string
   plan:      string

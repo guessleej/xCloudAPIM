@@ -13,7 +13,6 @@
  *   forward_claims = "sub,email,plan" | "*"         (轉注 claims 為 X-Claim-* header)
  */
 import { createRemoteJWKSet, jwtVerify } from 'jose'
-import { createSecretKey } from 'crypto'
 import type { ExecContext, PluginDeps } from '../../types.js'
 import { applyIdentity, forwardClaims, extractScopes } from './claims.js'
 import { config as appConfig } from '../../../config/index.js'
@@ -45,22 +44,22 @@ export async function jwtAuth(
 
   // ─── 驗簽 ─────────────────────────────────────────────────
   try {
-    let verifyKey: Parameters<typeof jwtVerify>[1]
+    const jwtOptions = {
+      algorithms: [algorithm as 'RS256' | 'HS256' | 'ES256'],
+      issuer:     cfg['issuer']   || undefined,
+      audience:   cfg['audience'] || undefined,
+    }
+
+    let payload: Awaited<ReturnType<typeof jwtVerify>>['payload']
 
     if (algorithm === 'HS256') {
       const secret = cfg['secret']
       if (!secret) return { ok: false, reason: 'HS256 secret not configured' }
-      verifyKey = createSecretKey(Buffer.from(secret, 'utf-8'))
+      ;({ payload } = await jwtVerify(token, new TextEncoder().encode(secret), jwtOptions))
     } else {
       const jwksUrl = cfg['jwks_url'] ?? appConfig.JWKS_URL
-      verifyKey = getJWKS(jwksUrl, appConfig.JWKS_CACHE_TTL_MS)
+      ;({ payload } = await jwtVerify(token, getJWKS(jwksUrl, appConfig.JWKS_CACHE_TTL_MS), jwtOptions))
     }
-
-    const { payload } = await jwtVerify(token, verifyKey, {
-      algorithms: [algorithm as 'RS256' | 'HS256' | 'ES256'],
-      issuer:     cfg['issuer']   || undefined,
-      audience:   cfg['audience'] || undefined,
-    })
 
     const claims = payload as Record<string, unknown>
 

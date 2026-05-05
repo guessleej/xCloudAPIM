@@ -8,7 +8,7 @@ RUN npm ci --ignore-scripts
 
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build || true
+RUN npm run build
 
 RUN npm ci --omit=dev --ignore-scripts
 

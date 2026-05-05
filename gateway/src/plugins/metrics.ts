@@ -83,7 +83,7 @@ const metricsPlugin: FastifyPluginAsync = async (fastify) => {
 
   // Expose /metrics endpoint
   fastify.get('/metrics', {
-    schema: { hide: true },
+    schema: { hide: true } as never,
   }, async (_req, reply) => {
     reply.header('Content-Type', registry.contentType)
     return registry.metrics()

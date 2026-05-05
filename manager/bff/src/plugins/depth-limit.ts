@@ -2,9 +2,9 @@
  * GraphQL query depth & complexity 限制
  * 以 Apollo Server 4 plugin 形式掛載
  */
-import type { GraphQLRequestContext, ApolloServerPlugin } from '@apollo/server'
+import type { GraphQLRequestListener, ApolloServerPlugin, GraphQLRequestContextDidResolveOperation } from '@apollo/server'
 import type { BffContext } from '../context.js'
-import { GraphQLError, type DocumentNode, type SelectionSetNode, type FieldNode } from 'graphql'
+import { GraphQLError, type SelectionSetNode, type FieldNode } from 'graphql'
 
 function measureDepth(node: SelectionSetNode | undefined, depth = 0): number {
   if (!node) return depth
@@ -26,11 +26,9 @@ function measureDepth(node: SelectionSetNode | undefined, depth = 0): number {
 
 export function depthLimitPlugin(maxDepth: number): ApolloServerPlugin<BffContext> {
   return {
-    async requestDidStart() {
+    async requestDidStart(): Promise<GraphQLRequestListener<BffContext>> {
       return {
-        async didResolveDocument(
-          ctx: GraphQLRequestContext<BffContext> & { document: DocumentNode },
-        ) {
+        async didResolveOperation(ctx: GraphQLRequestContextDidResolveOperation<BffContext>) {
           for (const def of ctx.document.definitions) {
             if (def.kind === 'OperationDefinition' && def.selectionSet) {
               const depth = measureDepth(def.selectionSet)
