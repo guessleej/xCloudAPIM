@@ -2,12 +2,13 @@
 /**
  * ApolloProvider for Client Components — wraps children with Apollo context
  */
-import { ApolloNextAppProvider, NextSSRApolloClient, InMemoryCache } from '@apollo/experimental-nextjs-app-support/ssr'
+import { ApolloNextAppProvider, ApolloClient, InMemoryCache } from '@apollo/experimental-nextjs-app-support'
+import { HttpLink } from '@apollo/client'
 
 function makeClientSide() {
-  return new NextSSRApolloClient({
+  return new ApolloClient({
     cache: new InMemoryCache(),
-    uri:   '/graphql',
+    link:  new HttpLink({ uri: '/graphql' }),
   })
 }
 

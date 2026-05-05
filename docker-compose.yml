@@ -681,8 +681,8 @@ services:
       KAFKA_BROKERS:         kafka:9092
       KAFKA_GROUP_ID:        notification-service
       KAFKA_CLIENT_ID:       notification-service
-      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin
-      MONGO_DB:              ${MONGO_DB:-apim_analytics}
+      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/apim_notifications?authSource=admin
+      MONGO_DB:              apim_notifications
       REDIS_HOST:            redis-master-1
       REDIS_PORT:            6379
       REDIS_PASSWORD:        ${REDIS_PASSWORD:-redis_pass_dev}
