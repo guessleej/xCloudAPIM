@@ -32,6 +32,7 @@ jobs:
       portal:       ${{ steps.filter.outputs.portal }}
       analytics:    ${{ steps.filter.outputs.analytics }}
       notification: ${{ steps.filter.outputs.notification }}
+      shared:       ${{ steps.filter.outputs.shared }}
       auth:         ${{ steps.filter.outputs.auth }}
       registry:     ${{ steps.filter.outputs.registry }}
       subscription: ${{ steps.filter.outputs.subscription }}
@@ -56,6 +57,8 @@ jobs:
               - 'manager/services/analytics/**'
             notification:
               - 'manager/services/notification/**'
+            shared:
+              - 'packages/shared/**'
             auth:
               - 'manager/services/auth/**'
             registry:
@@ -106,6 +109,7 @@ jobs:
     with:
       service:           studio
       working-directory: studio
+      run-test:          true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -117,6 +121,7 @@ jobs:
     with:
       service:           portal
       working-directory: portal
+      run-test:          true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -140,6 +145,18 @@ jobs:
     with:
       service:           notification-service
       working-directory: manager/services/notification
+      run-test:          true
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  ci-shared:
+    name: CI / shared
+    needs: changes
+    if: ${{ needs.changes.outputs.shared == 'true' || github.ref == 'refs/heads/main' }}
+    uses: ./.github/workflows/reusable-node.yml
+    with:
+      service:           shared
+      working-directory: packages/shared
       run-test:          true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
@@ -188,6 +205,7 @@ jobs:
     with:
       service:           policy-engine
       working-directory: policy-engine
+      go-version:        "1.25"
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -284,6 +302,9 @@ jobs:
       - ci-bff
       - ci-studio
       - ci-portal
+      - ci-analytics
+      - ci-notification
+      - ci-shared
       - ci-auth
       - ci-registry
       - ci-subscription

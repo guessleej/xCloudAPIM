@@ -1,40 +1,26 @@
 package domain
 
-import "time"
+import "strings"
 
-// ─── Policy Chain ─────────────────────────────────────────────
-type PolicyChain struct {
-	ID       string
-	APIID    string
-	Version  int64
-	ETag     string
-	Policies []*Policy
-}
-
-type Policy struct {
-	ID        string
-	Type      PolicyType
-	Phase     PolicyPhase
-	Order     int
-	Enabled   bool
-	Config    map[string]string
-	Condition string // 可選執行條件表達式
-}
+// ─── Enums ────────────────────────────────────────────────────
 
 type PolicyType string
 
 const (
 	PolicyTypeJWTAuth           PolicyType = "jwt_auth"
 	PolicyTypeAPIKeyAuth        PolicyType = "api_key_auth"
+	PolicyTypeOAuth2Scope       PolicyType = "oauth2_scope"
 	PolicyTypeRateLimit         PolicyType = "rate_limit"
 	PolicyTypeCORS              PolicyType = "cors"
 	PolicyTypeRequestTransform  PolicyType = "request_transform"
 	PolicyTypeResponseTransform PolicyType = "response_transform"
 	PolicyTypeIPWhitelist       PolicyType = "ip_whitelist"
+	PolicyTypeIPBlacklist       PolicyType = "ip_blacklist"
 	PolicyTypeCache             PolicyType = "cache"
-	PolicyTypeEncrypt           PolicyType = "encrypt"
 	PolicyTypeCircuitBreaker    PolicyType = "circuit_breaker"
+	PolicyTypeEncrypt           PolicyType = "encrypt"
 	PolicyTypeLogging           PolicyType = "logging"
+	PolicyTypeCustom            PolicyType = "custom"
 )
 
 type PolicyPhase string
@@ -46,7 +32,7 @@ const (
 	PhasePostResponse PolicyPhase = "post_response"
 )
 
-// PhaseOrder 定義各 Phase 的執行優先序
+// PhaseOrder is used by executor to sort policies across phases.
 var PhaseOrder = map[PolicyPhase]int{
 	PhasePreRequest:   0,
 	PhasePostRequest:  1,
@@ -54,89 +40,153 @@ var PhaseOrder = map[PolicyPhase]int{
 	PhasePostResponse: 3,
 }
 
+// ─── Policy Domain Models ─────────────────────────────────────
+
+// PolicyChain is the runtime representation stored and consumed by the engine.
+// All IDs are plain strings (UUID format) for JSON serialisation simplicity.
+type PolicyChain struct {
+	ID       string      `json:"id"`
+	APIID    string      `json:"api_id"`
+	Version  int64       `json:"version"`
+	ETag     string      `json:"etag"`
+	Policies []*Policy   `json:"policies"`
+}
+
+type Policy struct {
+	ID        string            `json:"id"`
+	Type      PolicyType        `json:"type"`
+	Phase     PolicyPhase       `json:"phase"`
+	Order     int               `json:"order"`
+	Enabled   bool              `json:"enabled"`
+	Config    map[string]string `json:"config"`
+	Condition string            `json:"condition,omitempty"`
+}
+
 // ─── Execution Context ────────────────────────────────────────
 
-// ExecContext 貫穿整個 Policy Chain 執行流程的可變上下文
+// ExecContext carries the mutable state of a single request through the plugin pipeline.
 type ExecContext struct {
-	// 識別資訊
-	TraceID  string
+	// Identity
 	APIID    string
 	ClientID string
 	Plan     string
+	TraceID  string
 
-	// 請求資訊（Plugin 可讀寫）
-	Method     string
-	Path       string
-	Host       string
-	RemoteIP   string
-	RequestHeaders  map[string]string
-	RequestBody     []byte
-	QueryParams     map[string]string
+	// Request (mutable by transform plugins)
+	Method         string
+	Path           string
+	RemoteIP       string
+	RequestHeaders map[string]string
+	QueryParams    map[string]string
+	RequestBody    []byte
 
-	// 回應資訊（Phase post_request 之後才有值）
+	// Response (set after upstream call)
 	StatusCode      int
-	ResponseHeaders map[string]string
 	ResponseBody    []byte
+	CachedBody      []byte
+	ResponseHeaders map[string]string
 
-	// 快取命中旗標（Cache Plugin 設定，跳過上游呼叫）
-	CacheHit    bool
-	CachedBody  []byte
+	// Cache
+	CacheHit bool
 
-	// 中止旗標（任一 Plugin 設定後終止後續 Plugin）
-	Aborted    bool
-	AbortCode  int
-	AbortMsg   string
+	// Abort signal
+	Aborted   bool
+	AbortCode int
+	AbortMsg  string
 
-	// 額外 claims（JWT Auth Plugin 解析後注入）
+	// JWT / auth claims
 	Claims map[string]interface{}
-
-	// 計時
-	StartedAt time.Time
 }
 
-func NewExecContext(apiID, traceID, method, path, host, remoteIP string) *ExecContext {
+func NewExecContext(apiID, method, path, remoteIP string, headers map[string]string, query map[string]string, body []byte) *ExecContext {
+	h := make(map[string]string, len(headers))
+	for k, v := range headers {
+		h[strings.ToLower(k)] = v
+	}
 	return &ExecContext{
-		TraceID:         traceID,
 		APIID:           apiID,
 		Method:          method,
 		Path:            path,
-		Host:            host,
 		RemoteIP:        remoteIP,
-		RequestHeaders:  make(map[string]string),
+		RequestHeaders:  h,
+		QueryParams:     query,
+		RequestBody:     body,
 		ResponseHeaders: make(map[string]string),
-		QueryParams:     make(map[string]string),
 		Claims:          make(map[string]interface{}),
-		StartedAt:       time.Now(),
 	}
 }
 
-func (ctx *ExecContext) Abort(code int, msg string) {
-	ctx.Aborted = true
-	ctx.AbortCode = code
-	ctx.AbortMsg = msg
+func (e *ExecContext) Abort(code int, msg string) {
+	e.Aborted = true
+	e.AbortCode = code
+	e.AbortMsg = msg
 }
 
-func (ctx *ExecContext) GetHeader(key string) string {
-	return ctx.RequestHeaders[key]
+func (e *ExecContext) GetHeader(key string) string {
+	if e.RequestHeaders == nil {
+		return ""
+	}
+	return e.RequestHeaders[strings.ToLower(key)]
 }
 
-func (ctx *ExecContext) SetRequestHeader(key, value string) {
-	ctx.RequestHeaders[key] = value
+func (e *ExecContext) SetRequestHeader(key, value string) {
+	if e.RequestHeaders == nil {
+		e.RequestHeaders = make(map[string]string)
+	}
+	e.RequestHeaders[strings.ToLower(key)] = value
 }
 
-func (ctx *ExecContext) SetResponseHeader(key, value string) {
-	ctx.ResponseHeaders[key] = value
+func (e *ExecContext) SetResponseHeader(key, value string) {
+	if e.ResponseHeaders == nil {
+		e.ResponseHeaders = make(map[string]string)
+	}
+	e.ResponseHeaders[strings.ToLower(key)] = value
 }
 
-// ─── Plugin 結果 ──────────────────────────────────────────────
-type PluginResult struct {
-	Skipped bool   // 條件不符，跳過
-	Cached  bool   // Cache Plugin 命中
-	Aborted bool   // 攔截請求
-	Error   error
+// ─── Management DTOs (HTTP API) ───────────────────────────────
+
+type CreateChainRequest struct {
+	Name        string `json:"name"    binding:"required,min=2,max=100"`
+	Description string `json:"description"`
+	APIID       string `json:"api_id"`
 }
 
-// ─── Circuit Breaker State ────────────────────────────────────
+type UpdateChainRequest struct {
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+}
+
+type PublishChainRequest struct {
+	ChangeSummary string `json:"change_summary"`
+}
+
+type CreatePolicyRequest struct {
+	Type      PolicyType        `json:"type"      binding:"required"`
+	Phase     PolicyPhase       `json:"phase"     binding:"required"`
+	Order     int               `json:"order"`
+	Name      string            `json:"name"      binding:"required,min=2,max=100"`
+	Enabled   *bool             `json:"enabled"`
+	Config    map[string]string `json:"config"`
+	Condition string            `json:"condition"`
+}
+
+type UpdatePolicyRequest struct {
+	Type      *PolicyType        `json:"type"`
+	Phase     *PolicyPhase       `json:"phase"`
+	Order     *int               `json:"order"`
+	Name      *string            `json:"name"`
+	Enabled   *bool              `json:"enabled"`
+	Config    map[string]string  `json:"config"`
+	Condition *string            `json:"condition"`
+}
+
+type InvalidateCacheRequest struct {
+	APIID  string `json:"api_id"  binding:"required"`
+	Reason string `json:"reason"`
+}
+
+// ─── CB State (used by circuit_breaker plugin) ────────────────
+
 type CBState string
 
 const (

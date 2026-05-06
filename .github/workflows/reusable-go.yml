@@ -39,9 +39,13 @@ jobs:
 
       - name: Download modules
         run: go mod download
+        env:
+          GOTOOLCHAIN: auto
 
       - name: Verify modules
         run: go mod verify
+        env:
+          GOTOOLCHAIN: auto
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
@@ -52,10 +56,14 @@ jobs:
 
       - name: go vet
         run: go vet ./...
+        env:
+          GOTOOLCHAIN: auto
 
       - name: Run tests
         run: |
           go test -race -coverprofile=coverage.out -covermode=atomic ./...
+        env:
+          GOTOOLCHAIN: auto
 
       - name: Upload coverage
         if:   success()
@@ -68,3 +76,5 @@ jobs:
 
       - name: Build binary (sanity check)
         run: go build -o /dev/null ./cmd/...
+        env:
+          GOTOOLCHAIN: auto

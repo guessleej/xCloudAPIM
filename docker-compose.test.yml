@@ -1,0 +1,281 @@
+# ═══════════════════════════════════════════════════════════════
+#  xCloudAPIM — docker-compose.test.yml（測試環境，獨立啟動）
+#  用法：docker compose -f docker-compose.test.yml up -d
+#  目的：CI/CD 或本機整合測試，最小化服務數量
+# ═══════════════════════════════════════════════════════════════
+name: xcloudapim-test
+
+x-restart: &no-restart
+  restart: "no"
+
+networks:
+  test-net:
+    driver: bridge
+
+volumes:
+  test-postgres-data:
+  test-redis-data:
+
+services:
+
+  # ── Infrastructure ────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    <<: *no-restart
+    container_name: test-postgres
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-test_password}
+      POSTGRES_DB:       ${POSTGRES_DB:-apim_test}
+    volumes:
+      - test-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER:-apim_user}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test-net
+
+  redis:
+    image: redis:7-alpine
+    <<: *no-restart
+    container_name: test-redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-test_redis_pass}"]
+    volumes:
+      - test-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-test_redis_pass}", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - test-net
+
+  flyway:
+    image: flyway/flyway:10-alpine
+    <<: *no-restart
+    container_name: test-flyway
+    command: >
+      -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-apim_test}
+      -user=${POSTGRES_USER:-apim_user}
+      -password=${POSTGRES_PASSWORD:-test_password}
+      -connectRetries=10
+      migrate
+    volumes:
+      - ./infra/db/migrations:/flyway/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - test-net
+
+  # ── Core Application Services ─────────────────────────────────
+
+  auth-service:
+    build:
+      context: ./manager/services/auth
+      dockerfile: Dockerfile
+    <<: *no-restart
+    container_name: test-auth-service
+    environment:
+      APP_ENV:            test
+      PORT:               8081
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-test_password}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim_test}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis
+      REDIS_PORT:         6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-test_redis_pass}
+      REDIS_DB:           0
+      JWT_SECRET:         ${JWT_SECRET:-test-jwt-secret-min-32-chars-long}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-test-internal-secret}
+      SESSION_SECRET:     ${SESSION_SECRET:-test-session-secret-min-32-chars}
+      VAULT_ADDR:         ""
+      SMTP_HOST:          ""
+    ports:
+      - "18081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-net
+
+  registry-service:
+    build:
+      context: ./manager/services/registry
+      dockerfile: Dockerfile
+    <<: *no-restart
+    container_name: test-registry-service
+    environment:
+      APP_ENV:            test
+      PORT:               8082
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-test_password}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim_test}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis
+      REDIS_PORT:         6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-test_redis_pass}
+      REDIS_DB:           0
+      AUTH_SERVICE_URL:   http://auth-service:8081
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-test-internal-secret}
+    ports:
+      - "18082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8082/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-net
+
+  subscription-service:
+    build:
+      context: ./manager/services/subscription
+      dockerfile: Dockerfile
+    <<: *no-restart
+    container_name: test-subscription-service
+    environment:
+      APP_ENV:            test
+      PORT:               8084
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-test_password}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim_test}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis
+      REDIS_PORT:         6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-test_redis_pass}
+      REDIS_DB:           0
+      KAFKA_BROKERS:      ""
+      AUTH_SERVICE_URL:   http://auth-service:8081
+      REGISTRY_SERVICE_URL: http://registry-service:8082
+      NOTIFICATION_SERVICE_URL: ""
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-test-internal-secret}
+    ports:
+      - "18084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      auth-service:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8084/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-net
+
+  policy-engine:
+    build:
+      context: ./policy-engine
+      dockerfile: Dockerfile
+    <<: *no-restart
+    container_name: test-policy-engine
+    environment:
+      APP_ENV:            test
+      PORT:               8083
+      GRPC_PORT:          9083
+      POSTGRES_HOST:      postgres
+      POSTGRES_PORT:      5432
+      POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-test_password}
+      POSTGRES_DB:        ${POSTGRES_DB:-apim_test}
+      POSTGRES_SSL_MODE:  disable
+      REDIS_HOST:         redis
+      REDIS_PORT:         6379
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:-test_redis_pass}
+      REDIS_DB:           0
+      REGISTRY_SERVICE_URL: http://registry-service:8082
+      JWKS_URL:           http://auth-service:8081/oauth2/jwks
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-test-internal-secret}
+    ports:
+      - "18083:8083"
+      - "19083:9083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8083/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-net
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    <<: *no-restart
+    container_name: test-gateway
+    environment:
+      NODE_ENV:                   test
+      PORT:                       8080
+      REDIS_HOST:                 redis
+      REDIS_PORT:                 6379
+      REDIS_PASSWORD:             ${REDIS_PASSWORD:-test_redis_pass}
+      REDIS_DB:                   0
+      AUTH_SERVICE_URL:           http://auth-service:8081
+      REGISTRY_SERVICE_URL:       http://registry-service:8082
+      POLICY_ENGINE_URL:          http://policy-engine:8083
+      SUBSCRIPTION_SERVICE_URL:   http://subscription-service:8084
+      JWKS_URL:                   http://auth-service:8081/oauth2/jwks
+      JWKS_CACHE_TTL_MS:          60000
+      ROUTE_REFRESH_INTERVAL_MS:  5000
+      ROUTE_CACHE_TTL_S:          60
+      PROXY_TIMEOUT_MS:           10000
+      PROXY_KEEP_ALIVE_TIMEOUT_MS: 30000
+      MAX_BODY_SIZE_MB:           10
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:-test-internal-secret}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ""
+      OTEL_SERVICE_NAME:          test-gateway
+    ports:
+      - "18090:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+      policy-engine:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - test-net
