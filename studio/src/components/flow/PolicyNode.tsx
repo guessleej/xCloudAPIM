@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { type NodeProps } from '@xyflow/react'
+import { type NodeProps, type Node } from '@xyflow/react'
 import { GripVertical, Trash2, AlertCircle } from 'lucide-react'
 import { clsx } from 'clsx'
 import { useStudioStore } from '../../stores/studio.ts'
@@ -12,7 +12,9 @@ export interface PolicyNodeData extends Record<string, unknown> {
   policy: PolicyDef
 }
 
-function PolicyNode({ data, selected }: NodeProps<PolicyNodeData>) {
+export type PolicyNodeType = Node<PolicyNodeData, 'policy'>
+
+function PolicyNode({ data, selected }: NodeProps<PolicyNodeType>) {
   const { policy } = data
   const meta = PLUGIN_REGISTRY.find((p) => p.type === policy.type)
   const { selectPolicy, removePolicy, updatePolicy } = useStudioStore()

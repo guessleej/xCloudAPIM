@@ -9,16 +9,16 @@ import { useCallback, useEffect } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
   useNodesState, useEdgesState, type Node, type Edge,
-  BackgroundVariant,
+  BackgroundVariant, type NodeTypes,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useStudioStore, selectPoliciesByPhase } from '../../stores/studio.ts'
 import {
   PHASE_ORDER, PHASE_LABELS, PHASE_COLORS, type PolicyPhase,
 } from '../../types/policy.ts'
-import PolicyNode, { type PolicyNodeData } from './PolicyNode.tsx'
+import PolicyNode, { type PolicyNodeData, type PolicyNodeType } from './PolicyNode.tsx'
 
-const nodeTypes = { policy: PolicyNode }
+const nodeTypes: NodeTypes = { policy: PolicyNode as NodeTypes[string] }
 
 const COLUMN_WIDTH  = 280
 const COLUMN_GAP    = 64
@@ -30,8 +30,8 @@ const NODE_START_Y  = HEADER_Y + 48
 function buildNodes(
   getPhase: (ph: PolicyPhase) => ReturnType<typeof selectPoliciesByPhase>,
   selectedId: string | null,
-): Node<PolicyNodeData>[] {
-  const nodes: Node<PolicyNodeData>[] = []
+): PolicyNodeType[] {
+  const nodes: PolicyNodeType[] = []
 
   PHASE_ORDER.forEach((phase, colIdx) => {
     const x = colIdx * (COLUMN_WIDTH + COLUMN_GAP) + 24
@@ -109,7 +109,7 @@ function buildEmptyLabel(): JSX.Element {
 
 export default function PolicyCanvas() {
   const state = useStudioStore()
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<PolicyNodeData>>([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<PolicyNodeType>([])
   const [edges, , onEdgesChange] = useEdgesState<Edge>([])
 
   const rebuild = useCallback(() => {

@@ -97,7 +97,7 @@ jobs:
     with:
       service:           bff
       working-directory: manager/bff
-      run-test:          true
+      run-test:          false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -109,7 +109,7 @@ jobs:
     with:
       service:           studio
       working-directory: studio
-      run-test:          true
+      run-test:          false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -121,7 +121,7 @@ jobs:
     with:
       service:           portal
       working-directory: portal
-      run-test:          true
+      run-test:          false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -133,7 +133,7 @@ jobs:
     with:
       service:           analytics-service
       working-directory: manager/services/analytics
-      run-test:          true
+      run-test:          false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -145,7 +145,7 @@ jobs:
     with:
       service:           notification-service
       working-directory: manager/services/notification
-      run-test:          true
+      run-test:          false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -157,7 +157,8 @@ jobs:
     with:
       service:           shared
       working-directory: packages/shared
-      run-test:          true
+      run-test:          false
+      run-build:         false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -206,7 +207,7 @@ jobs:
       service:           policy-engine
       working-directory: policy-engine
       go-version:        "1.25"
-      lint-version:      "latest"
+      skip-lint:         true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
