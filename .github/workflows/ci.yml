@@ -40,8 +40,8 @@ jobs:
       migrations:   ${{ steps.filter.outputs.migrations }}
       infra:        ${{ steps.filter.outputs.infra }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
@@ -220,7 +220,7 @@ jobs:
     if: ${{ needs.changes.outputs.migrations == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate Flyway naming convention
         run: |
           set -e
@@ -242,7 +242,7 @@ jobs:
     if: ${{ needs.changes.outputs.infra == 'true' }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Validate docker-compose syntax
         env:
           SESSION_SECRET: ci-validation-session-secret-min-32-chars
@@ -275,7 +275,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Create .env
         run: cp .env.example .env
@@ -295,7 +295,7 @@ jobs:
 
       - name: Upload K6 results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: k6-smoke-results
           path: /tmp/k6-*.json

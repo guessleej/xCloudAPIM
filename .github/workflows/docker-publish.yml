@@ -53,7 +53,7 @@ jobs:
       policy:       ${{ steps.filter.outputs.policy }}
       is-tag:       ${{ steps.ctx.outputs.is-tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Detect tag push
         id: ctx
@@ -64,7 +64,7 @@ jobs:
             echo "is-tag=false" >> $GITHUB_OUTPUT
           fi
 
-      - uses: dorny/paths-filter@v3
+      - uses: dorny/paths-filter@v4
         id: filter
         with:
           filters: |
