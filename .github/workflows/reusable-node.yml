@@ -62,9 +62,9 @@ jobs:
       - name: Install dependencies
         run: |
           if [ -f package-lock.json ]; then
-            npm ci --prefer-offline
+            npm ci --prefer-offline --legacy-peer-deps
           else
-            npm install --ignore-scripts
+            npm install --ignore-scripts --legacy-peer-deps
           fi
 
       - name: Lint

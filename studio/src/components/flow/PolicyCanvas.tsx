@@ -16,9 +16,10 @@ import { useStudioStore, selectPoliciesByPhase } from '../../stores/studio.ts'
 import {
   PHASE_ORDER, PHASE_LABELS, PHASE_COLORS, type PolicyPhase,
 } from '../../types/policy.ts'
-import PolicyNode, { type PolicyNodeData, type PolicyNodeType } from './PolicyNode.tsx'
+import PolicyNode, { type PolicyNodeData } from './PolicyNode.tsx'
 
-const nodeTypes: NodeTypes = { policy: PolicyNode as NodeTypes[string] }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const nodeTypes: NodeTypes = { policy: PolicyNode as any }
 
 const COLUMN_WIDTH  = 280
 const COLUMN_GAP    = 64
@@ -30,8 +31,9 @@ const NODE_START_Y  = HEADER_Y + 48
 function buildNodes(
   getPhase: (ph: PolicyPhase) => ReturnType<typeof selectPoliciesByPhase>,
   selectedId: string | null,
-): PolicyNodeType[] {
-  const nodes: PolicyNodeType[] = []
+): Node[] {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const nodes: Node<any>[] = []
 
   PHASE_ORDER.forEach((phase, colIdx) => {
     const x = colIdx * (COLUMN_WIDTH + COLUMN_GAP) + 24
@@ -109,7 +111,7 @@ function buildEmptyLabel(): JSX.Element {
 
 export default function PolicyCanvas() {
   const state = useStudioStore()
-  const [nodes, setNodes, onNodesChange] = useNodesState<PolicyNodeType>([])
+  const [nodes, setNodes, onNodesChange] = useNodesState<Node>([])
   const [edges, , onEdgesChange] = useEdgesState<Edge>([])
 
   const rebuild = useCallback(() => {

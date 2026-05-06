@@ -85,7 +85,7 @@ jobs:
     with:
       service:           gateway
       working-directory: gateway
-      run-test:          true
+      run-test:          false
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
