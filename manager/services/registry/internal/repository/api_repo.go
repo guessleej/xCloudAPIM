@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -317,12 +318,16 @@ func (r *APIRepository) UpsertGatewayRoute(ctx context.Context, route *domain.Ga
 	const q = `
 		INSERT INTO gateway_routes (
 			id, api_id, api_version_id, host_match, path_prefix,
+			methods, route_host_key, route_methods_key,
 			upstream_url, strip_prefix, policy_chain_id, active, priority
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
-		ON CONFLICT (api_id, api_version_id)
+		) VALUES ($1,$2,$3,$4,$5,$6::endpoint_method[],$7,$8,$9,$10,$11,$12,$13)
+		ON CONFLICT (api_id, route_host_key, path_prefix, route_methods_key, api_version_id)
 		DO UPDATE SET
 			host_match       = EXCLUDED.host_match,
 			path_prefix      = EXCLUDED.path_prefix,
+			methods          = EXCLUDED.methods,
+			route_host_key   = EXCLUDED.route_host_key,
+			route_methods_key = EXCLUDED.route_methods_key,
 			upstream_url     = EXCLUDED.upstream_url,
 			strip_prefix     = EXCLUDED.strip_prefix,
 			policy_chain_id  = EXCLUDED.policy_chain_id,
@@ -330,9 +335,17 @@ func (r *APIRepository) UpsertGatewayRoute(ctx context.Context, route *domain.Ga
 			priority         = EXCLUDED.priority,
 			updated_at       = NOW()`
 
+	methods := normalizeRouteMethods(route.Methods)
+	var methodsValue interface{}
+	if len(methods) > 0 {
+		methodsValue = pq.Array(methods)
+	}
+
 	_, err := r.db.ExecContext(ctx, q,
 		route.ID, route.APIID, route.APIVersionID,
 		nullStr(route.HostMatch), route.PathPrefix,
+		methodsValue,
+		routeHostKey(route.HostMatch), routeMethodsKey(methods),
 		route.UpstreamURL, nullStr(route.StripPrefix),
 		route.PolicyChainID, route.Active, route.Priority,
 	)
@@ -341,9 +354,6 @@ func (r *APIRepository) UpsertGatewayRoute(ctx context.Context, route *domain.Ga
 
 // ─── internal helpers ─────────────────────────────────────────
 
-type scannable interface {
-	Scan(dest ...interface{}) error
-}
 
 func (r *APIRepository) scanAPI(ctx context.Context, q string, args ...interface{}) (*domain.API, error) {
 	row := r.db.QueryRowxContext(ctx, q, args...)
@@ -384,6 +394,43 @@ func nullStr(s string) interface{} {
 		return nil
 	}
 	return s
+}
+
+func routeHostKey(host string) string {
+	trimmed := strings.ToLower(strings.TrimSpace(host))
+	if trimmed == "" {
+		return "*"
+	}
+	return trimmed
+}
+
+func routeMethodsKey(methods []string) string {
+	if len(methods) == 0 {
+		return "*"
+	}
+	return strings.Join(methods, ",")
+}
+
+func normalizeRouteMethods(methods []string) []string {
+	if len(methods) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(methods))
+	normalized := make([]string, 0, len(methods))
+	for _, method := range methods {
+		value := strings.ToUpper(strings.TrimSpace(method))
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		normalized = append(normalized, value)
+	}
+	sort.Strings(normalized)
+	return normalized
 }
 
 func marshalJSON(v interface{}) ([]byte, error) {

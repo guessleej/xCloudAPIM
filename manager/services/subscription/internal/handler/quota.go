@@ -35,7 +35,6 @@ func (h *QuotaHandler) GetQuota(c *gin.Context) {
 // GET /v1/subscriptions/:id/usage
 func (h *QuotaHandler) GetUsageHistory(c *gin.Context) {
 	subID := c.Param("id")
-	apiID := c.Query("api_id")
 
 	var q struct {
 		From  string `form:"from"   binding:"required"`
@@ -46,7 +45,7 @@ func (h *QuotaHandler) GetUsageHistory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errResp(err))
 		return
 	}
-	apiID = q.APIID
+	apiID := q.APIID
 
 	rows, err := h.svc.GetUsageHistory(c.Request.Context(), subID, apiID, q.From, q.To)
 	if err != nil {

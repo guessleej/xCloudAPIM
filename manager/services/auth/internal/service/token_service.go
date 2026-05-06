@@ -292,19 +292,3 @@ func buildJWKS(pub *rsa.PublicKey, kid string) *domain.JWKS {
 		}},
 	}
 }
-
-func decodeJWTPayload(tokenStr string) (map[string]interface{}, error) {
-	parts := strings.Split(tokenStr, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("invalid JWT format")
-	}
-	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, err
-	}
-	var claims map[string]interface{}
-	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, err
-	}
-	return claims, nil
-}

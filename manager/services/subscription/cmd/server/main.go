@@ -80,7 +80,9 @@ func main() {
 
 	// ─── gRPC ─────────────────────────────────────────────────
 	grpcPort := 50052
-	fmt.Sscanf(cfg.Server.GRPCPort, "%d", &grpcPort)
+	if _, err := fmt.Sscanf(cfg.Server.GRPCPort, "%d", &grpcPort); err != nil {
+		log.Warn("invalid GRPC_PORT, using default 50052", zap.Error(err))
+	}
 	grpcSrv := grpcserver.NewServer(quotaSvc, log, grpcPort)
 
 	// ─── 啟動 ─────────────────────────────────────────────────

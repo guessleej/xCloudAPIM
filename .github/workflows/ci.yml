@@ -206,6 +206,7 @@ jobs:
       service:           policy-engine
       working-directory: policy-engine
       go-version:        "1.25"
+      lint-version:      "latest"
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -242,8 +243,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate docker-compose syntax
+        env:
+          SESSION_SECRET: ci-validation-session-secret-min-32-chars
+          JWT_SECRET: ci-validation-jwt-secret-min-32-characters
+          INTERNAL_SERVICE_SECRET: ci-validation-internal-secret-value
+          POSTGRES_PASSWORD: ci-validation-pass
+          REDIS_PASSWORD: ci-validation-redis
         run: docker compose -f docker-compose.yml config --quiet
       - name: Check for missing volumes/networks
+        env:
+          SESSION_SECRET: ci-validation-session-secret-min-32-chars
+          JWT_SECRET: ci-validation-jwt-secret-min-32-characters
+          INTERNAL_SERVICE_SECRET: ci-validation-internal-secret-value
+          POSTGRES_PASSWORD: ci-validation-pass
+          REDIS_PASSWORD: ci-validation-redis
         run: docker compose -f docker-compose.yml config > /tmp/compose-resolved.yml && echo "✅ Compose config resolved"
 
   # ─────────────────────────────────────────────────────────────
