@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [validate-tag, build-all]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0  # need full history for changelog
 
@@ -132,7 +132,7 @@ jobs:
           echo "changelog-path=/tmp/changelog.md" >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           name:       "v${{ needs.validate-tag.outputs.version }}"
           body_path:  /tmp/changelog.md

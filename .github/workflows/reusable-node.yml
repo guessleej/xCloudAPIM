@@ -34,7 +34,7 @@ jobs:
         working-directory: ${{ inputs.working-directory }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Check for package-lock.json
         id: lockfile
@@ -47,7 +47,7 @@ jobs:
 
       - name: Set up Node.js ${{ inputs.node-version }} (with cache)
         if: steps.lockfile.outputs.exists == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version:   ${{ inputs.node-version }}
           cache:          npm
@@ -55,7 +55,7 @@ jobs:
 
       - name: Set up Node.js ${{ inputs.node-version }} (no cache)
         if: steps.lockfile.outputs.exists != 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ inputs.node-version }}
 
@@ -83,7 +83,7 @@ jobs:
 
       - name: Upload coverage
         if:   ${{ inputs.run-test && success() }}
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v6
         with:
           token:   ${{ secrets.CODECOV_TOKEN }}
           flags:   ${{ inputs.service }}

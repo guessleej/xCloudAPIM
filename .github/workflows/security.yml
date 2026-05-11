@@ -26,8 +26,8 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/checkout@v6
+      - uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
           deny-licenses:    GPL-3.0, LGPL-3.0
@@ -51,8 +51,8 @@ jobs:
           - service: policy-engine
             dir:     policy-engine
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25"
           cache: true
@@ -90,8 +90,8 @@ jobs:
           - service: notification
             dir:     manager/services/notification
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
@@ -122,7 +122,7 @@ jobs:
           - policy-engine
           - portal
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Run Trivy vulnerability scanner
         continue-on-error: true   # skip gracefully if image not yet pushed via CD
@@ -138,7 +138,7 @@ jobs:
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Trivy scan results to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: hashFiles(format('trivy-{0}.sarif', matrix.service)) != ''
         with:
           sarif_file: "trivy-${{ matrix.service }}.sarif"
@@ -160,18 +160,18 @@ jobs:
       matrix:
         language: [javascript, go]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries:   security-and-quality
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
