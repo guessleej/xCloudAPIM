@@ -50,12 +50,11 @@ jobs:
             dir:     manager/services/subscription
           - service: policy-engine
             dir:     policy-engine
-            go-version: "1.25"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go-version || '1.22' }}
+          go-version: "1.25"
           cache: true
           cache-dependency-path: ${{ matrix.dir }}/go.sum
       - name: Install govulncheck

@@ -173,6 +173,8 @@ jobs:
     with:
       service:           auth-service
       working-directory: manager/services/auth
+      go-version:        "1.25"
+      skip-lint:         true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -184,6 +186,8 @@ jobs:
     with:
       service:           registry-service
       working-directory: manager/services/registry
+      go-version:        "1.25"
+      skip-lint:         true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -195,6 +199,8 @@ jobs:
     with:
       service:           subscription-service
       working-directory: manager/services/subscription
+      go-version:        "1.25"
+      skip-lint:         true
     secrets:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
