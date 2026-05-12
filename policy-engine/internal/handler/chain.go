@@ -12,7 +12,7 @@ import (
 // ─── Gateway endpoint ─────────────────────────────────────────
 
 func (h *Handlers) GetGatewayChain(c *gin.Context) {
-	apiID := c.Param("apiId")
+	apiID := c.Param("id")
 	if apiID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "api_id is required"})
 		return

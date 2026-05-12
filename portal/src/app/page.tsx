@@ -1,14 +1,16 @@
 import Link from 'next/link'
 import { ArrowRight, Zap, Shield, BarChart3, Code2 } from 'lucide-react'
-import { getRscClient } from '@/lib/apollo/client'
+import { getAuthClient, getRscClient } from '@/lib/apollo/client'
 import { GET_PUBLIC_APIS } from '@/lib/graphql/queries'
+import { getSession } from '@/lib/auth'
 import APICard from '@/components/api/APICard'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
-async function getFeaturedAPIs() {
+async function getFeaturedAPIs(token?: string) {
   try {
-    const { data } = await getRscClient().query({
+    const client = token ? getAuthClient(token) : getRscClient()
+    const { data } = await client.query({
       query:     GET_PUBLIC_APIS,
       variables: { limit: 6, page: 1, filter: { status: 'ACTIVE' } },
     })
@@ -19,7 +21,8 @@ async function getFeaturedAPIs() {
 }
 
 export default async function HomePage() {
-  const apis = await getFeaturedAPIs()
+  const session = await getSession()
+  const apis = await getFeaturedAPIs(session?.token)
 
   return (
     <>

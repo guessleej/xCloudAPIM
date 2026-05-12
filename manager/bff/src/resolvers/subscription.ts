@@ -4,6 +4,14 @@ import type { APIDTO } from '../datasources/registry-api.js'
 import type { OrgDTO } from '../datasources/auth-api.js'
 import { requireAuth, buildPageInfo, notFound } from './helpers.js'
 
+function mapFeatures(features: PlanDTO['features']): string[] {
+  if (!features) return []
+  if (Array.isArray(features)) return features.map(String)
+  return Object.entries(features).map(([key, value]) =>
+    typeof value === 'boolean' ? key : `${key}: ${String(value)}`,
+  )
+}
+
 function mapPlan(p: PlanDTO) {
   return {
     id:          p.id,
@@ -11,11 +19,11 @@ function mapPlan(p: PlanDTO) {
     description: p.description,
     rpmLimit:    p.rpm_limit,
     rpdLimit:    p.rpd_limit,
-    rphLimit:    p.rph_limit,
-    maxKeys:     p.max_keys,
-    price:       p.price,
+    rphLimit:    p.rph_limit ?? 0,
+    maxKeys:     p.max_api_keys,
+    price:       p.price_cents / 100,
     currency:    p.currency,
-    features:    p.features ?? [],
+    features:    mapFeatures(p.features),
     isPublic:    p.is_public,
     createdAt:   p.created_at,
   }
@@ -24,11 +32,11 @@ function mapPlan(p: PlanDTO) {
 function mapSub(s: SubscriptionDTO) {
   return {
     id:        s.id,
-    orgId:     s.org_id,
+    orgId:     s.organization_id,
     planId:    s.plan_id,
     apiId:     s.api_id,
     status:    s.status.toUpperCase(),
-    expiresAt: s.expires_at,
+    expiresAt: s.end_date,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
   }
@@ -37,7 +45,9 @@ function mapSub(s: SubscriptionDTO) {
 function mapKey(k: APIKeyDTO) {
   return {
     id:             k.id,
-    keyId:          k.key_id,
+    keyId:          k.key_prefix,
+    keyPrefix:      k.key_prefix,
+    plainKey:       k.key,
     subscriptionId: k.subscription_id,
     name:           k.name,
     status:         k.status.toUpperCase(),
@@ -118,10 +128,10 @@ export const subscriptionResolvers = {
         rpm_limit:   input['rpmLimit'] as number,
         rpd_limit:   input['rpdLimit'] as number,
         rph_limit:   (input['rphLimit'] as number | undefined) ?? 0,
-        max_keys:    input['maxKeys'] as number,
-        price:       input['price'] as number,
+        max_api_keys: input['maxKeys'] as number,
+        price_cents: Math.round((input['price'] as number) * 100),
         currency:    (input['currency'] as string | undefined) ?? 'USD',
-        features:    input['features'] as string[] | undefined,
+        features:    input['features'] as Record<string, unknown> | undefined,
         is_public:   input['isPublic'] as boolean | undefined,
       })
       return mapPlan(plan)
@@ -197,10 +207,10 @@ export const subscriptionResolvers = {
       return mapKey(key)
     },
 
-    revokeAPIKey: async (_: unknown, args: { id: string }, ctx: BffContext) => {
+    revokeAPIKey: async (_: unknown, args: { subscriptionId: string; id: string }, ctx: BffContext) => {
       requireAuth(ctx)
-      const key = await ctx.subscriptionAPI.revokeAPIKey(args.id)
-      return mapKey(key)
+      await ctx.subscriptionAPI.revokeAPIKey(args.subscriptionId, args.id)
+      return true
     },
   },
 

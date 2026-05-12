@@ -1,11 +1,11 @@
 # ── Stage 1: deps ─────────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS deps
+FROM node:20.19-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --legacy-peer-deps
 
 # ── Stage 2: builder ──────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS builder
+FROM node:20.19-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
@@ -18,7 +18,7 @@ ENV NODE_ENV=production
 RUN npm run build
 
 # ── Stage 3: runner ───────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS runner
+FROM node:20.19-alpine AS runner
 RUN apk add --no-cache dumb-init=1.2.5-r3
 
 ARG BUILD_DATE

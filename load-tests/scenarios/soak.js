@@ -11,7 +11,7 @@ import { listAPIs, gqlQuery, GQL_LIST_APIS } from '../libs/api.js'
 
 const DURATION  = __ENV.DURATION     || '2h'
 const API_KEY   = __ENV.TEST_API_KEY || ''
-const TEST_PATH = __ENV.TEST_PATH    || '/petstore/v1/pets'
+const TEST_PATH = __ENV.TEST_PATH    || '/dev/echo/v1/anything'
 
 export const options = {
   stages: [

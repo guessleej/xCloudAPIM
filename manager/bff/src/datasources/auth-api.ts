@@ -21,6 +21,54 @@ export interface OrgDTO {
   updated_at:  string
 }
 
+interface AuthMeResponse {
+  id:           string
+  email:        string
+  display_name: string
+  org_id:       string
+  org_name:     string
+  role:         string
+}
+
+function slugifyOrg(name: string, id: string): string {
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug || `org-${id.slice(0, 8)}`
+}
+
+function nowIso(): string {
+  return new Date().toISOString()
+}
+
+function mapMeToUser(me: AuthMeResponse): UserDTO {
+  const timestamp = nowIso()
+  return {
+    id:         me.id,
+    email:      me.email,
+    name:       me.display_name || me.email,
+    role:       me.role,
+    org_id:     me.org_id || null,
+    created_at: timestamp,
+    updated_at: timestamp,
+  }
+}
+
+function mapMeToOrg(me: AuthMeResponse): OrgDTO | null {
+  if (!me.org_id) return null
+  const timestamp = nowIso()
+  return {
+    id:          me.org_id,
+    name:        me.org_name || 'Default organization',
+    slug:        slugifyOrg(me.org_name || 'default-organization', me.org_id),
+    description: null,
+    created_at:  timestamp,
+    updated_at:  timestamp,
+  }
+}
+
 export class AuthAPI {
   private client: ServiceClient
 
@@ -33,40 +81,52 @@ export class AuthAPI {
   }
 
   async getMe(): Promise<UserDTO> {
-    return this.client.get<UserDTO>('/v1/users/me')
+    const me = await this.client.get<AuthMeResponse>('/auth/me')
+    return mapMeToUser(me)
   }
 
   async getUserById(id: string): Promise<UserDTO | null> {
     try {
-      return await this.client.get<UserDTO>(`/v1/users/${id}`)
+      const user = await this.getMe()
+      return user.id === id ? user : null
     } catch {
       return null
     }
   }
 
   async listOrganizations(page = 1, limit = 20, search?: string): Promise<OrgDTO[]> {
-    const qs = new URLSearchParams({ page: String(page), limit: String(limit) })
-    if (search) qs.set('search', search)
-    return this.client.get<OrgDTO[]>(`/v1/organizations?${qs}`)
+    void page
+    void limit
+    const me = await this.client.get<AuthMeResponse>('/auth/me')
+    const org = mapMeToOrg(me)
+    if (!org) return []
+    if (search && !org.name.toLowerCase().includes(search.toLowerCase())) return []
+    return [org]
   }
 
   async getOrganization(id: string): Promise<OrgDTO | null> {
     try {
-      return await this.client.get<OrgDTO>(`/v1/organizations/${id}`)
+      const me = await this.client.get<AuthMeResponse>('/auth/me')
+      const org = mapMeToOrg(me)
+      return org?.id === id ? org : null
     } catch {
       return null
     }
   }
 
   async createOrganization(input: { name: string; slug: string; description?: string }): Promise<OrgDTO> {
-    return this.client.post<OrgDTO>('/v1/organizations', input)
+    void input
+    throw new Error('organization management is handled by auth registration in this deployment')
   }
 
   async updateOrganization(id: string, input: Partial<OrgDTO>): Promise<OrgDTO> {
-    return this.client.put<OrgDTO>(`/v1/organizations/${id}`, input)
+    void id
+    void input
+    throw new Error('organization management is handled by auth registration in this deployment')
   }
 
   async deleteOrganization(id: string): Promise<void> {
-    await this.client.delete(`/v1/organizations/${id}`)
+    void id
+    throw new Error('organization deletion is not supported in this deployment')
   }
 }

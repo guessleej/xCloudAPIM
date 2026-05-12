@@ -3,11 +3,11 @@ import { gql } from '@apollo/client'
 // ── Public ───────────────────────────────────────────────────
 
 export const GET_PUBLIC_APIS = gql`
-  query GetPublicAPIs($limit: Int, $page: Int, $filter: APIFilter) {
-    apis(limit: $limit, page: $page, filter: $filter) {
+  query GetPublicAPIs($limit: Int, $page: Int) {
+    apis(limit: $limit, page: $page) {
       nodes {
         id name version basePath description status tags
-        organization { id name }
+        org { id name }
       }
       pageInfo { page limit total totalPages hasNext }
     }
@@ -18,11 +18,10 @@ export const GET_API_DETAIL = gql`
   query GetAPIDetail($id: ID!) {
     api(id: $id) {
       id name version basePath upstreamUrl description status tags
-      organization { id name }
-      plans {
-        id name description rateLimit { rpm rph rpd }
-        quotaLimit { daily monthly } price isFree
-      }
+      org { id name }
+    }
+    plans(isPublic: true) {
+      id name description rpmLimit rphLimit rpdLimit maxKeys price currency isPublic
     }
   }
 `
@@ -31,16 +30,11 @@ export const GET_API_FOR_DOCS = gql`
   query GetAPIForDocs($id: ID!) {
     api(id: $id) {
       id name version basePath upstreamUrl description status tags
-      organization { id name }
+      org { id name }
       policyChain {
         policies {
           type enabled config
         }
-      }
-      plans {
-        id name description isFree
-        rateLimit { rpm rph rpd }
-        quotaLimit { daily monthly }
       }
     }
   }
@@ -52,21 +46,19 @@ export const GET_ME = gql`
   query GetMe {
     me {
       id email name role
-      organizations { id name }
+      org { id name }
     }
   }
 `
 
 export const GET_MY_SUBSCRIPTIONS = gql`
   query GetMySubscriptions {
-    subscriptions(filter: { mine: true }) {
+    subscriptions {
       nodes {
-        id status appName createdAt
-        plan {
-          id name
-          api { id name basePath version }
-        }
-        apiKeys { id name keyPrefix status createdAt lastUsedAt }
+        id status createdAt
+        plan { id name }
+        api { id name basePath version }
+        apiKeys { id name keyPrefix status createdAt lastUsedAt subscriptionId }
       }
     }
   }
@@ -75,14 +67,12 @@ export const GET_MY_SUBSCRIPTIONS = gql`
 export const GET_SUBSCRIPTION_DETAIL = gql`
   query GetSubscriptionDetail($id: ID!) {
     subscription(id: $id) {
-      id status appName createdAt updatedAt
+      id status createdAt updatedAt
       plan {
-        id name description
-        rateLimit { rpm rph rpd }
-        quotaLimit { daily monthly }
-        api { id name basePath version description }
+        id name description rpmLimit rphLimit rpdLimit
       }
-      apiKeys { id name keyPrefix status createdAt lastUsedAt }
+      api { id name basePath version description }
+      apiKeys { id name keyPrefix plainKey status createdAt lastUsedAt subscriptionId }
     }
   }
 `

@@ -2,7 +2,7 @@
 #  Policy Engine Dockerfile — Multi-Stage Build
 # ═══════════════════════════════════════════════════════════════
 
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 ARG BUILD_DATE
 ARG GIT_COMMIT

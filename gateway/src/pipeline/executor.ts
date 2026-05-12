@@ -46,7 +46,7 @@ async function getPolicyChain(
 
   try {
     const resp = await fetch(
-      `${config.POLICY_ENGINE_URL}/v1/chains/${apiId}`,
+      `${config.POLICY_ENGINE_URL}/internal/chains/${apiId}`,
       { signal: AbortSignal.timeout(3000) },
     )
     if (resp.status === 404) return null

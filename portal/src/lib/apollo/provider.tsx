@@ -7,6 +7,7 @@ import { HttpLink } from '@apollo/client'
 
 function makeClientSide() {
   return new ApolloClient({
+    devtools: { enabled: false },
     cache: new InMemoryCache(),
     link:  new HttpLink({ uri: '/graphql' }),
   })

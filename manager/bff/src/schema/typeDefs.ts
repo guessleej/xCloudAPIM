@@ -140,6 +140,8 @@ export const typeDefs = gql`
   type APIKey {
     id:             ID!
     keyId:          String!
+    keyPrefix:      String!
+    plainKey:       String
     subscriptionId: ID!
     subscription:   Subscription
     name:           String!
@@ -308,7 +310,7 @@ export const typeDefs = gql`
     cancelSubscription(id: ID!): Subscription!
 
     createAPIKey(input: CreateAPIKeyInput!): APIKey!
-    revokeAPIKey(id: ID!): APIKey!
+    revokeAPIKey(subscriptionId: ID!, id: ID!): Boolean!
 
     publishPolicyChain(apiId: ID!, input: PublishPolicyChainInput!): PolicyChain!
     invalidatePolicyCache(apiId: ID!): Boolean!

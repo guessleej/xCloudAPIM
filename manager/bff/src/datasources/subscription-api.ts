@@ -8,22 +8,22 @@ export interface PlanDTO {
   description: string | null
   rpm_limit:   number
   rpd_limit:   number
-  rph_limit:   number
-  max_keys:    number
-  price:       number
+  rph_limit:   number | null
+  max_api_keys: number
+  price_cents: number
   currency:    string
-  features:    string[]
+  features:    Record<string, unknown> | null
   is_public:   boolean
   created_at:  string
 }
 
 export interface SubscriptionDTO {
   id:         string
-  org_id:     string
+  organization_id: string
   plan_id:    string
   api_id:     string
   status:     string
-  expires_at: string | null
+  end_date:   string | null
   created_at: string
   updated_at: string
 }
@@ -37,7 +37,7 @@ export interface SubscriptionListResponse {
 
 export interface APIKeyDTO {
   id:              string
-  key_id:          string
+  key_prefix:      string
   subscription_id: string
   name:            string
   status:          string
@@ -47,16 +47,17 @@ export interface APIKeyDTO {
   expires_at:      string | null
   last_used_at:    string | null
   created_at:      string
+  key?:            string
 }
 
 export class SubscriptionAPI {
   private client: ServiceClient
 
-  constructor(log: Logger, authHeader?: string) {
+  constructor(log: Logger, extraHeaders?: Record<string, string>) {
     this.client = new ServiceClient(
       config.SUBSCRIPTION_SERVICE_URL,
       log,
-      authHeader ? { authorization: authHeader } : {},
+      extraHeaders,
     )
   }
 
@@ -64,7 +65,8 @@ export class SubscriptionAPI {
   async listPlans(isPublic?: boolean): Promise<PlanDTO[]> {
     const qs = new URLSearchParams()
     if (isPublic !== undefined) qs.set('is_public', String(isPublic))
-    return this.client.get<PlanDTO[]>(`/v1/plans?${qs}`)
+    const data = await this.client.get<{ plans: PlanDTO[] }>(`/v1/plans?${qs}`)
+    return data.plans
   }
 
   async getPlan(id: string): Promise<PlanDTO | null> {
@@ -77,8 +79,8 @@ export class SubscriptionAPI {
 
   async getPlansByIds(ids: string[]): Promise<PlanDTO[]> {
     if (!ids.length) return []
-    const qs = new URLSearchParams({ ids: ids.join(',') })
-    return this.client.get<PlanDTO[]>(`/v1/plans/batch?${qs}`)
+    const results = await Promise.all(ids.map(async (id) => this.getPlan(id)))
+    return results.filter((plan): plan is PlanDTO => plan !== null)
   }
 
   async createPlan(input: Partial<PlanDTO>): Promise<PlanDTO> {
@@ -102,12 +104,21 @@ export class SubscriptionAPI {
     limit?:  number
   }): Promise<SubscriptionListResponse> {
     const qs = new URLSearchParams()
-    if (params.orgId)  qs.set('org_id', params.orgId)
     if (params.apiId)  qs.set('api_id', params.apiId)
     if (params.status) qs.set('status', params.status)
     if (params.page)   qs.set('page', String(params.page))
-    if (params.limit)  qs.set('limit', String(params.limit))
-    return this.client.get<SubscriptionListResponse>(`/v1/subscriptions?${qs}`)
+    if (params.limit)  qs.set('size', String(params.limit))
+    const data = await this.client.get<{
+      subscriptions: SubscriptionDTO[] | null
+      total: number
+    }>(`/v1/subscriptions?${qs}`)
+    const subscriptions = data.subscriptions ?? []
+    return {
+      data: subscriptions,
+      total: data.total,
+      page: params.page ?? 1,
+      limit: params.limit ?? subscriptions.length,
+    }
   }
 
   async getSubscription(id: string): Promise<SubscriptionDTO | null> {
@@ -120,8 +131,8 @@ export class SubscriptionAPI {
 
   async getSubscriptionsByIds(ids: string[]): Promise<SubscriptionDTO[]> {
     if (!ids.length) return []
-    const qs = new URLSearchParams({ ids: ids.join(',') })
-    return this.client.get<SubscriptionDTO[]>(`/v1/subscriptions/batch?${qs}`)
+    const results = await Promise.all(ids.map(async (id) => this.getSubscription(id)))
+    return results.filter((sub): sub is SubscriptionDTO => sub !== null)
   }
 
   async createSubscription(input: {
@@ -130,26 +141,44 @@ export class SubscriptionAPI {
     api_id:     string
     expires_at?: string
   }): Promise<SubscriptionDTO> {
-    return this.client.post<SubscriptionDTO>('/v1/subscriptions', input)
+    return this.client.post<SubscriptionDTO>('/v1/subscriptions', {
+      api_id:  input.api_id,
+      plan_id: input.plan_id,
+    })
   }
 
   async updateSubscriptionStatus(id: string, status: string): Promise<SubscriptionDTO> {
-    return this.client.patch<SubscriptionDTO>(`/v1/subscriptions/${id}/status`, { status })
+    if (status === 'cancelled') {
+      await this.client.put<void>(`/v1/subscriptions/${id}/cancel`, {})
+      const sub = await this.getSubscription(id)
+      if (!sub) throw new Error(`subscription not found after cancel: ${id}`)
+      return sub
+    }
+    if (status === 'active') {
+      await this.client.put<void>(`/v1/subscriptions/${id}/approve`, {})
+      const sub = await this.getSubscription(id)
+      if (!sub) throw new Error(`subscription not found after approve: ${id}`)
+      return sub
+    }
+    if (status === 'suspended') {
+      await this.client.put<void>(`/v1/subscriptions/${id}/suspend`, { reason: 'suspended via portal' })
+      const sub = await this.getSubscription(id)
+      if (!sub) throw new Error(`subscription not found after suspend: ${id}`)
+      return sub
+    }
+    throw new Error(`unsupported subscription status transition: ${status}`)
   }
 
   // ─── API Keys ─────────────────────────────────────────────────
   async listAPIKeys(subscriptionId: string, status?: string): Promise<APIKeyDTO[]> {
-    const qs = new URLSearchParams({ subscription_id: subscriptionId })
-    if (status) qs.set('status', status)
-    return this.client.get<APIKeyDTO[]>(`/v1/keys?${qs}`)
+    const data = await this.client.get<{ keys: APIKeyDTO[] }>(`/v1/subscriptions/${subscriptionId}/keys`)
+    return status
+      ? data.keys.filter((key) => key.status === status)
+      : data.keys
   }
 
   async getAPIKey(id: string): Promise<APIKeyDTO | null> {
-    try {
-      return await this.client.get<APIKeyDTO>(`/v1/keys/${id}`)
-    } catch {
-      return null
-    }
+    throw new Error(`getAPIKey is not supported without subscription context: ${id}`)
   }
 
   async createAPIKey(input: {
@@ -160,10 +189,20 @@ export class SubscriptionAPI {
     scopes?:         string[]
     expires_at?:     string
   }): Promise<APIKeyDTO> {
-    return this.client.post<APIKeyDTO>('/v1/keys', input)
+    return this.client.post<APIKeyDTO>(`/v1/subscriptions/${input.subscription_id}/keys`, {
+      name: input.name,
+      allowed_ips: input.allowed_ips,
+      allowed_origins: input.allowed_origins,
+      scopes: input.scopes,
+      expires_at: input.expires_at,
+    })
   }
 
-  async revokeAPIKey(id: string): Promise<APIKeyDTO> {
-    return this.client.patch<APIKeyDTO>(`/v1/keys/${id}/revoke`, {})
+  async revokeAPIKey(subscriptionId: string, id: string): Promise<void> {
+    await this.client.request<void>({
+      method: 'DELETE',
+      path: `/v1/subscriptions/${subscriptionId}/keys/${id}`,
+      body: { reason: 'revoked via portal' },
+    })
   }
 }

@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/xcloudapim/registry-service/internal/middleware"
 	"github.com/xcloudapim/registry-service/internal/repository"
 	"github.com/xcloudapim/registry-service/internal/service"
 	"go.uber.org/zap"
@@ -62,8 +63,8 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 		api.POST("/:id/versions/:version/deprecate", h.DeprecateVersion) // POST /apis/:id/versions/1.0.0/deprecate
 	}
 
-	// ─── Gateway Routes（供 API Gateway 消費） ─────────────────
-	routes := r.Group("/internal/routes")
+	// ─── Gateway Routes（供 API Gateway 消費，需 X-Internal-Token） ─
+	routes := r.Group("/internal/routes", middleware.InternalAuth())
 	{
 		routes.GET("",       h.GetActiveRoutes) // GET /internal/routes
 		routes.GET("/delta", h.GetRoutesDelta)  // GET /internal/routes/delta?since=<unix_ts>

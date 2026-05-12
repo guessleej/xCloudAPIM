@@ -66,13 +66,13 @@ func main() {
 	}
 	defer db.Close()
 
-	// ─── Redis Rate Limit Client（獨立 DB，避免干擾 Token Cache）
-	rateLimitRdb := redisCache.NewClient(cfg.Redis.DB + 1)
+	// Redis cluster only supports DB 0; keep rate-limit keys isolated by prefix.
+	rateLimitRdb := redisCache.NewClient(0)
 
 	// ─── Repositories ─────────────────────────────────────────
 	clientRepo := repository.NewClientRepository(db)
-	tokenRepo  := repository.NewTokenRepository(db)
-	userRepo   := repository.NewUserRepository(db)
+	tokenRepo := repository.NewTokenRepository(db)
+	userRepo := repository.NewUserRepository(db)
 
 	// ─── Services ─────────────────────────────────────────────
 	tokenService := service.NewTokenService(
@@ -87,8 +87,8 @@ func main() {
 		cfg.JWT.AuthCodeTTL,
 		logger,
 	)
-	sessionService  := service.NewSessionService(userRepo, cfg.Session.Secret, logger)
-	rateLimitStore  := service.NewRedisRateLimitStore(rateLimitRdb)
+	sessionService := service.NewSessionService(userRepo, redisCache, cfg.Session.Secret, logger)
+	rateLimitStore := service.NewRedisRateLimitStore(rateLimitRdb)
 
 	// ─── HTTP Server ──────────────────────────────────────────
 	h := handler.NewHandlers(authService, sessionService, rateLimitStore, db, redisCache, logger)

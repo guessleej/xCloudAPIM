@@ -48,11 +48,12 @@ services:
     environment:
       POSTGRES_DB:       ${POSTGRES_DB:-apim}
       POSTGRES_USER:     ${POSTGRES_USER:-apim_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       PGDATA:            /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/postgres-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+      - ./seeds:/seeds:ro
     ports:
       - "15433:5432"
     healthcheck:
@@ -67,18 +68,19 @@ services:
     logging: *default-logging
 
   pgadmin:
-    image: dpage/pgadmin4:latest
+    image: dpage/pgadmin4:8.5
     <<: *always-restart
     container_name: apim-pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL:    admin@xcloudapim.local
-      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_DEFAULT_EMAIL:    ${PGADMIN_DEFAULT_EMAIL:?PGADMIN_DEFAULT_EMAIL is required}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD is required}
       PGADMIN_CONFIG_SERVER_MODE: "False"
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "True"
     volumes:
       - ./infra/pgadmin/servers.json:/pgadmin4/servers.json:ro
     ports:
-      - "5050:80"
+      # 限定只綁 127.0.0.1，避免外部直接存取
+      - "127.0.0.1:5050:80"
     depends_on:
       postgres:
         condition: service_healthy
@@ -101,14 +103,14 @@ services:
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
-      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-master1-data:/data
     ports:
       - "16379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -127,14 +129,14 @@ services:
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
-      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-master2-data:/data
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -153,14 +155,14 @@ services:
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
-      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-master3-data:/data
     ports:
       - "16381:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_pass_dev}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -179,8 +181,8 @@ services:
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
-      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
       - "6382:6379"
     networks:
@@ -198,8 +200,8 @@ services:
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
-      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
       - "6383:6379"
     networks:
@@ -217,8 +219,8 @@ services:
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
-      --requirepass ${REDIS_PASSWORD:-redis_pass_dev}
-      --masterauth ${REDIS_PASSWORD:-redis_pass_dev}
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     ports:
       - "6384:6379"
     networks:
@@ -228,20 +230,9 @@ services:
   redis-cluster-init:
     image: redis:7-alpine
     container_name: apim-redis-cluster-init
-    command: >
-      sh -c "
-        sleep 5 &&
-        redis-cli -a ${REDIS_PASSWORD:-redis_pass_dev}
-          --cluster create
-          172.28.0.20:6379
-          172.28.0.21:6379
-          172.28.0.22:6379
-          172.28.0.23:6379
-          172.28.0.24:6379
-          172.28.0.25:6379
-          --cluster-replicas 1
-          --cluster-yes
-      "
+    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --cluster create 172.28.0.20:6379 172.28.0.21:6379 172.28.0.22:6379 172.28.0.23:6379 172.28.0.24:6379 172.28.0.25:6379 --cluster-replicas 1 --cluster-yes"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -340,7 +331,7 @@ services:
       apim-net:
 
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     <<: *always-restart
     container_name: apim-kafka-ui
     depends_on:
@@ -351,37 +342,41 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER:        zookeeper:2181
       DYNAMIC_CONFIG_ENABLED:            "true"
+      # Basic Auth 登入保護
+      AUTH_TYPE:                         LOGIN
+      SPRING_SECURITY_USER_NAME:         ${MGMT_ADMIN_USER:-admin}
+      SPRING_SECURITY_USER_PASSWORD:     ${MGMT_ADMIN_PASSWORD:?MGMT_ADMIN_PASSWORD is required}
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     networks:
       apim-net:
         ipv4_address: 172.28.0.32
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
-  # HashiCorp Vault（Dev Mode）
+  # HashiCorp Vault（Production Mode — file storage）
   # ─────────────────────────────────────────────────────────────
   vault:
     image: hashicorp/vault:1.15
     <<: *always-restart
     container_name: apim-vault
-    command: vault server -dev -dev-root-token-id=${VAULT_TOKEN:-dev-root-token} -dev-listen-address=0.0.0.0:8200
+    command: vault server -config=/vault/config/config.hcl
+    user: "0"   # run as root so vault can write to the data volume on first start
     environment:
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-dev-root-token}
-      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
       VAULT_ADDR: http://127.0.0.1:8200
     cap_add:
       - IPC_LOCK
     volumes:
       - vault-data:/vault/data
+      - ./infra/vault/config.hcl:/vault/config/config.hcl:ro
     ports:
-      - "8200:8200"
+      - "127.0.0.1:8200:8200"
     healthcheck:
-      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 | grep -q 'Initialized'"]
+      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 2>&1 | grep -qE 'Initialized|sealed'"]
       interval: 10s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 10
+      start_period: 15s
     networks:
       apim-net:
         ipv4_address: 172.28.0.40
@@ -390,18 +385,20 @@ services:
   vault-init:
     image: hashicorp/vault:1.15
     container_name: apim-vault-init
-    entrypoint: ["sh", "-c", "apk add --no-cache openssl 2>/dev/null; sh /scripts/init-vault.sh"]
+    entrypoint: ["sh", "-c", "apk add --no-cache openssl python3 2>/dev/null; sh /scripts/vault-prod-init.sh"]
     environment:
-      VAULT_ADDR:     http://vault:8200
-      VAULT_TOKEN:    ${VAULT_TOKEN:-dev-root-token}
-      POSTGRES_HOST:  postgres
-      POSTGRES_DB:    ${POSTGRES_DB:-apim}
-      POSTGRES_USER:  ${POSTGRES_USER:-apim_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-apim_pass_dev}
-      REDIS_HOST:     redis-master-1
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_pass_dev}
+      VAULT_ADDR:              http://vault:8200
+      VAULT_TOKEN:             ${VAULT_TOKEN:-}
+      POSTGRES_HOST:           postgres
+      POSTGRES_DB:             ${POSTGRES_DB:-apim}
+      POSTGRES_USER:           ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:       ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      REDIS_HOST:              redis-master-1
+      REDIS_PASSWORD:          ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      INTERNAL_SERVICE_SECRET: ${INTERNAL_SERVICE_SECRET:-}
     volumes:
-      - ./scripts/init-vault.sh:/scripts/init-vault.sh:ro
+      - ./scripts/vault-prod-init.sh:/scripts/vault-prod-init.sh:ro
+      - vault-data:/vault/data
     depends_on:
       vault:
         condition: service_healthy
@@ -417,7 +414,7 @@ services:
     container_name: apim-mongodb
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-apim_user}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-mongo_pass_dev}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?MONGO_PASSWORD is required}
       MONGO_INITDB_DATABASE:      ${MONGO_DB:-apim_analytics}
     volumes:
       - mongodb-data:/data/db
@@ -436,16 +433,18 @@ services:
     logging: *default-logging
 
   mongo-express:
-    image: mongo-express:latest
+    image: mongo-express:1.0.2
     <<: *always-restart
     container_name: apim-mongo-express
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-apim_user}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:-mongo_pass_dev}
-      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/
-      ME_CONFIG_BASICAUTH:             false
+      ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:?MONGO_PASSWORD is required}
+      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/
+      ME_CONFIG_BASICAUTH:             true
+      ME_CONFIG_BASICAUTH_USERNAME:    ${MGMT_ADMIN_USER:-admin}
+      ME_CONFIG_BASICAUTH_PASSWORD:    ${MGMT_ADMIN_PASSWORD:?MGMT_ADMIN_PASSWORD is required}
     ports:
-      - "18081:8081"
+      - "127.0.0.1:18081:8081"
     depends_on:
       mongodb:
         condition: service_healthy
@@ -465,26 +464,26 @@ services:
       - node.name=es01
       - cluster.name=apim-cluster
       - discovery.type=single-node
-      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:-elastic_pass_dev}
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required}
       - xpack.security.enabled=true
       - xpack.security.http.ssl.enabled=false
       - xpack.security.transport.ssl.enabled=false
-      - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     ulimits:
-      memlock:
-        soft: -1
-        hard: -1
       nofile:
         soft: 65536
         hard: 65536
+    deploy:
+      resources:
+        limits:
+          memory: 768m
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
       - "9300:9300"
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:-elastic_pass_dev} http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required} http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -501,10 +500,10 @@ services:
     environment:
       ELASTICSEARCH_HOSTS:    http://elasticsearch:9200
       ELASTICSEARCH_USERNAME: kibana_system
-      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD:-kibana_pass_dev}
-      XPACK_SECURITY_ENCRYPTIONKEY: ${KIBANA_ENCRYPTION_KEY:-kibana_enc_key_32_chars_minimum}
+      ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD:?KIBANA_PASSWORD is required}
+      XPACK_SECURITY_ENCRYPTIONKEY: ${KIBANA_ENCRYPTION_KEY:?KIBANA_ENCRYPTION_KEY is required}
     ports:
-      - "5601:5601"
+      - "0.0.0.0:5601:5601"
     depends_on:
       elasticsearch:
         condition: service_healthy
@@ -522,7 +521,7 @@ services:
     command: >
       -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-apim}
       -user=${POSTGRES_USER:-apim_user}
-      -password=${POSTGRES_PASSWORD:-apim_pass_dev}
+      -password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       -connectRetries=10
       migrate
     volumes:
@@ -562,7 +561,7 @@ services:
     container_name: apim-grafana
     environment:
       GF_SECURITY_ADMIN_USER:     admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_SECURITY_ADMIN_PASSWORD:?GF_SECURITY_ADMIN_PASSWORD is required}
       GF_USERS_ALLOW_SIGN_UP:     "false"
       GF_FEATURE_TOGGLES_ENABLE:  "traceToMetrics"
     volumes:
@@ -570,7 +569,7 @@ services:
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
     ports:
-      - "3002:3000"
+      - "0.0.0.0:3002:3000"
     depends_on:
       - prometheus
     networks:
@@ -586,7 +585,7 @@ services:
       COLLECTOR_OTLP_ENABLED: "true"
       SPAN_STORAGE_TYPE:      memory
     ports:
-      - "16686:16686"   # Jaeger UI
+      - "0.0.0.0:16686:16686"   # Jaeger UI
       - "4317:4317"     # OTLP gRPC
       - "4318:4318"     # OTLP HTTP
       - "14268:14268"   # Jaeger HTTP
@@ -604,7 +603,7 @@ services:
     container_name: apim-mailhog
     ports:
       - "11025:1025"   # SMTP
-      - "8025:8025"   # Web UI
+      - "0.0.0.0:8025:8025"   # Web UI
     networks:
       apim-net:
         ipv4_address: 172.28.0.80
@@ -629,11 +628,11 @@ services:
       KAFKA_BROKERS:       kafka:9092
       KAFKA_GROUP_ID:      analytics-service
       KAFKA_CLIENT_ID:     analytics-service
-      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin
+      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin
       MONGO_DB:            ${MONGO_DB:-apim_analytics}
       REDIS_HOST:          redis-master-1
       REDIS_PORT:          6379
-      REDIS_PASSWORD:      ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:      ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:            2
       RAW_EVENT_TTL_DAYS:  30
       OTEL_SERVICE_NAME:   analytics-service
@@ -681,11 +680,11 @@ services:
       KAFKA_BROKERS:         kafka:9092
       KAFKA_GROUP_ID:        notification-service
       KAFKA_CLIENT_ID:       notification-service
-      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-mongo_pass_dev}@mongodb:27017/apim_notifications?authSource=admin
+      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/apim_notifications?authSource=admin
       MONGO_DB:              apim_notifications
       REDIS_HOST:            redis-master-1
       REDIS_PORT:            6379
-      REDIS_PASSWORD:        ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:        ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:              3
       SMTP_HOST:             mailhog
       SMTP_PORT:             1025
@@ -742,21 +741,24 @@ services:
       POLICY_ENGINE_URL:          http://policy-engine:8083
       SUBSCRIPTION_SERVICE_URL:   http://subscription-service:8084
       JWKS_URL:                   http://auth-service:8081/oauth2/jwks
+      SESSION_SECRET:             ${SESSION_SECRET:?SESSION_SECRET is required (min 32 chars)}
       JWKS_CACHE_TTL_MS:          300000
       JWT_ISSUER:                 ${JWT_ISSUER:-}
       JWT_AUDIENCE:               ${JWT_AUDIENCE:-}
       GRAPHQL_PATH:               /graphql
       GRAPHQL_MAX_DEPTH:          10
+      GRAPHQL_MAX_COMPLEXITY:     ${GRAPHQL_MAX_COMPLEXITY:-200}
       INTROSPECTION_ENABLED:      ${INTROSPECTION_ENABLED:-false}
       UPSTREAM_TIMEOUT_MS:        10000
       REDIS_HOST:                 redis-master-1
       REDIS_PORT:                 6379
-      REDIS_PASSWORD:             ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:             ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:                   1
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:          bff
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
     ports:
-      - "14000:4000"
+      - "0.0.0.0:14000:4000"
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -799,7 +801,7 @@ services:
       PORT:                       8080
       REDIS_HOST:                 redis-master-1
       REDIS_PORT:                 6379
-      REDIS_PASSWORD:             ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:             ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:                   0
       AUTH_SERVICE_URL:           http://auth-service:8081
       REGISTRY_SERVICE_URL:       http://registry-service:8082
@@ -814,8 +816,9 @@ services:
       MAX_BODY_SIZE_MB:           10
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:          api-gateway
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
     ports:
-      - "18090:8080"
+      - "0.0.0.0:18090:8080"
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -854,7 +857,7 @@ services:
     <<: *always-restart
     container_name: apim-studio
     ports:
-      - "5173:80"
+      - "0.0.0.0:5173:80"
     depends_on:
       bff:
         condition: service_healthy
@@ -895,13 +898,15 @@ services:
       PORT:                 3001
       HOSTNAME:             "0.0.0.0"
       BFF_URL:              http://bff:4000/graphql
-      SESSION_SECRET:       ${SESSION_SECRET:-change-me-in-production-32chars-min}
-      NEXT_PUBLIC_SITE_URL: ${PORTAL_URL:-http://localhost:3001}
+      AUTH_SERVICE_URL:     http://auth-service:8081
+      SESSION_SECRET:       ${SESSION_SECRET:?SESSION_SECRET is required (min 32 chars)}
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+      NEXT_PUBLIC_SITE_URL: ${PORTAL_URL:-http://localhost:19000}
       NEXT_PUBLIC_SITE_NAME:    xCloudAPIM Developer Portal
-      NEXT_PUBLIC_GATEWAY_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:8090}
+      NEXT_PUBLIC_GATEWAY_URL: ${GATEWAY_PUBLIC_URL:-http://localhost:18090}
       REGISTRY_SERVICE_URL:    http://registry-service:8082
     ports:
-      - "3001:3001"
+      - "0.0.0.0:3001:3001"
     depends_on:
       bff:
         condition: service_healthy
@@ -943,12 +948,12 @@ services:
       POSTGRES_HOST:      postgres
       POSTGRES_PORT:      5432
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
-      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  disable
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
-      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       JWT_SECRET:         ${JWT_SECRET:?JWT_SECRET is required}
       SESSION_SECRET:     ${SESSION_SECRET:?SESSION_SECRET is required (min 32 chars)}
       JWT_ACCESS_TTL:     ${JWT_ACCESS_TTL:-15m}
@@ -956,13 +961,14 @@ services:
       OAUTH2_ISSUER:      ${OAUTH2_ISSUER:-http://localhost/api/auth}
       AUTH_CORS_ALLOWED_ORIGINS: ${AUTH_CORS_ALLOWED_ORIGINS:-http://localhost:3001,http://localhost:5173}
       VAULT_ADDR:         http://vault:8200
-      VAULT_TOKEN:        ${VAULT_TOKEN:-dev-root-token}
+      VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       SMTP_HOST:          mailhog
       SMTP_PORT:          1025
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME:  auth-service
+      OTEL_SERVICE_NAME:          auth-service
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
     ports:
-      - "18081:8081"
+      - "0.0.0.0:18091:8081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1008,21 +1014,22 @@ services:
       POSTGRES_HOST:      postgres
       POSTGRES_PORT:      5432
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
-      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  disable
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
-      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin
       ES_ADDRESSES:       http://elasticsearch:9200
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
       AUTH_SERVICE_URL:   http://auth-service:8081
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME:  registry-service
+      OTEL_SERVICE_NAME:          registry-service
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
     ports:
-      - "18082:8082"
+      - "0.0.0.0:18082:8082"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1070,19 +1077,20 @@ services:
       POSTGRES_HOST:      postgres
       POSTGRES_PORT:      5432
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
-      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  disable
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
-      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
       REGISTRY_SERVICE_URL: http://registry-service:8082
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
-      OTEL_SERVICE_NAME:  policy-engine
+      OTEL_SERVICE_NAME:          policy-engine
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
     ports:
-      - "18083:8083"
+      - "0.0.0.0:18083:8083"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1130,12 +1138,12 @@ services:
       POSTGRES_HOST:      postgres
       POSTGRES_PORT:      5432
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
-      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:-apim_pass_dev}
+      POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  disable
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
-      REDIS_PASSWORD:     ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:           0
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
@@ -1144,8 +1152,9 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:8085
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
       OTEL_SERVICE_NAME:  subscription-service
+      INTERNAL_SERVICE_SECRET:    ${INTERNAL_SERVICE_SECRET:?INTERNAL_SERVICE_SECRET is required}
     ports:
-      - "18084:8084"
+      - "0.0.0.0:18084:8084"
     depends_on:
       postgres:
         condition: service_healthy
@@ -1184,9 +1193,11 @@ services:
     volumes:
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infra/nginx/auth:/etc/nginx/auth:ro
+      - ./infra/nginx/certs:/etc/nginx/certs:ro
     ports:
-      - "19000:80"
-      - "19443:443"
+      - "0.0.0.0:19000:80"
+      - "0.0.0.0:19443:443"
     depends_on:
       gateway:
         condition: service_healthy
@@ -1195,6 +1206,12 @@ services:
       studio:
         condition: service_started
       portal:
+        condition: service_started
+      kibana:
+        condition: service_started
+      grafana:
+        condition: service_started
+      jaeger:
         condition: service_started
     healthcheck:
       test: ["CMD", "nginx", "-t"]
@@ -1222,7 +1239,7 @@ services:
     <<: *always-restart
     container_name: apim-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:-apim_pass_dev}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
     depends_on:
       postgres:
         condition: service_healthy
@@ -1237,7 +1254,7 @@ services:
     container_name: apim-redis-exporter
     environment:
       REDIS_ADDR:     redis://redis-master-1:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_pass_dev}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -1270,13 +1287,28 @@ services:
     <<: *always-restart
     container_name: apim-nginx-exporter
     command:
-      - '-nginx.scrape-uri=http://nginx/nginx_status'
+      - '-nginx.scrape-uri=http://nginx:8888/nginx_status'
     depends_on:
       nginx:
         condition: service_healthy
     networks:
       apim-net:
         ipv4_address: 172.28.0.113
+    logging: *default-logging
+
+  kafka-exporter:
+    image: danielqsj/kafka-exporter:v1.7.0
+    <<: *always-restart
+    container_name: apim-kafka-exporter
+    command:
+      - '--kafka.server=kafka:9092'
+      - '--web.listen-address=:9308'
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      apim-net:
+        ipv4_address: 172.28.0.116
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1314,10 +1346,10 @@ services:
     environment:
       DOCKER_INFLUXDB_INIT_MODE:        setup
       DOCKER_INFLUXDB_INIT_USERNAME:    admin
-      DOCKER_INFLUXDB_INIT_PASSWORD:    influx_k6_pass
+      DOCKER_INFLUXDB_INIT_PASSWORD:    ${INFLUXDB_K6_PASSWORD:?INFLUXDB_K6_PASSWORD is required}
       DOCKER_INFLUXDB_INIT_ORG:         xcloudapim
       DOCKER_INFLUXDB_INIT_BUCKET:      k6
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: k6-super-secret-token
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_K6_ADMIN_TOKEN:?INFLUXDB_K6_ADMIN_TOKEN is required}
     ports:
       - "8087:8086"
     volumes:

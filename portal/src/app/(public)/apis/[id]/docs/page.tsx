@@ -1,8 +1,9 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { getRscClient } from '@/lib/apollo/client'
+import { getAuthClient, getRscClient } from '@/lib/apollo/client'
 import { GET_API_FOR_DOCS } from '@/lib/graphql/queries'
+import { getSession } from '@/lib/auth'
 import DocTabNav from '@/components/docs/DocTabNav'
 import OverviewSection from '@/components/docs/OverviewSection'
 import SpecViewer from '@/components/api/SpecViewer'
@@ -10,7 +11,7 @@ import MultiLangExamples from '@/components/docs/MultiLangExamples'
 import ErrorsSection from '@/components/docs/ErrorsSection'
 import DocsApiHeader from '@/components/docs/DocsApiHeader'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 const GATEWAY_URL =
   process.env.NEXT_PUBLIC_GATEWAY_URL ?? 'https://api.example.com'
@@ -22,9 +23,10 @@ interface Props {
   searchParams: { tab?: string }
 }
 
-async function getAPI(id: string) {
+async function getAPI(id: string, token?: string) {
   try {
-    const { data } = await getRscClient().query({
+    const client = token ? getAuthClient(token) : getRscClient()
+    const { data } = await client.query({
       query: GET_API_FOR_DOCS,
       variables: { id },
     })
@@ -44,7 +46,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function APIDocsPage({ params, searchParams }: Props) {
-  const api = await getAPI(params.id)
+  const session = await getSession()
+  const api = await getAPI(params.id, session?.token)
   if (!api) notFound()
 
   const tab = ((searchParams.tab ?? 'overview') as Tab)

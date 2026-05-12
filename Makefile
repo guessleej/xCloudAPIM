@@ -58,18 +58,52 @@ deps: ## 安裝所有服務的相依套件
 	  [ -f manager/services/$$svc/go.mod ] && (cd manager/services/$$svc && go mod download) || true; \
 	done
 
+.PHONY: doctor
+doctor: ## 檢查本機 toolchain 是否齊全
+	@bash scripts/dev-doctor.sh
+
+.PHONY: certs
+certs: ## 產生本地 TLS 憑證（需要 mkcert 或 openssl）
+	@bash scripts/gen-certs.sh
+
+.PHONY: htpasswd
+htpasswd: ## 產生管理介面 Nginx Basic Auth 密碼檔
+	@bash scripts/gen-htpasswd.sh
+
+.PHONY: secure-setup
+secure-setup: certs htpasswd ## 完整安全初始化（TLS 憑證 + Basic Auth 密碼）
+	@echo "$(GREEN)✅ 安全設定完成$(RESET)"
+
+.PHONY: bootstrap-go
+bootstrap-go: ## 安裝/啟用 Go 1.22.5（優先 mise/asdf，否則提示 Homebrew 安裝 mise）
+	@echo "$(YELLOW)▶ 準備 Go 1.22.5 toolchain...$(RESET)"
+	@if command -v mise >/dev/null 2>&1; then \
+	  mise install go@1.22.5; \
+	  echo "$(GREEN)✅ Go 已由 mise 安裝。使用：mise exec -- go version$(RESET)"; \
+	elif command -v asdf >/dev/null 2>&1; then \
+	  asdf plugin add golang https://github.com/asdf-community/asdf-golang.git 2>/dev/null || true; \
+	  asdf install golang 1.22.5; \
+	  echo "$(GREEN)✅ Go 已由 asdf 安裝。請重新載入 shell 後執行 go version$(RESET)"; \
+	elif command -v brew >/dev/null 2>&1; then \
+	  echo "未找到 mise/asdf。建議先執行：brew install mise && mise install"; \
+	  exit 1; \
+	else \
+	  echo "未找到 mise/asdf/brew。請安裝 mise 後執行：mise install"; \
+	  exit 1; \
+	fi
+
 # ═══════════════════════════════════════════════════════════════
 #  DOCKER — 基礎設施
 # ═══════════════════════════════════════════════════════════════
 .PHONY: infra-up
 infra-up: ## 啟動基礎設施服務（DB / Redis / Kafka / Vault）
 	@echo "$(YELLOW)▶ 啟動基礎設施...$(RESET)"
-	@$(COMPOSE) -f $(COMPOSE_FILE) up -d postgres redis mongodb kafka zookeeper vault elasticsearch
+	@$(COMPOSE) -f $(COMPOSE_FILE) up -d postgres redis-master-1 redis-master-2 redis-master-3 zookeeper kafka kafka-init vault vault-init mongodb elasticsearch
 	@echo "$(GREEN)✅ 基礎設施啟動完成$(RESET)"
 
 .PHONY: infra-down
 infra-down: ## 停止基礎設施服務
-	@$(COMPOSE) -f $(COMPOSE_FILE) stop postgres redis mongodb kafka zookeeper vault elasticsearch
+	@$(COMPOSE) -f $(COMPOSE_FILE) stop postgres redis-master-1 redis-master-2 redis-master-3 zookeeper kafka vault mongodb elasticsearch
 
 # ═══════════════════════════════════════════════════════════════
 #  DOCKER — 全服務
@@ -109,15 +143,18 @@ status: ## 查看各服務狀態與連線資訊
 	@echo ""
 	@echo "$(CYAN)連線資訊$(RESET)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo "  API Gateway      → http://localhost:8090"
-	@echo "  BFF GraphQL      → http://localhost:4000/graphql"
+	@echo "  Nginx Portal     → http://localhost:19000"
+	@echo "  API Gateway      → http://localhost:18090"
+	@echo "  BFF GraphQL      → http://localhost:14000/graphql"
+	@echo "  Auth Service     → http://localhost:18091/healthz"
+	@echo "  Registry Service → http://localhost:18082/healthz"
 	@echo "  Policy Studio    → http://localhost:5173"
-	@echo "  Developer Portal → http://localhost:3001"
-	@echo "  Grafana          → http://localhost:3002  (admin/admin)"
+	@echo "  Developer Portal → http://localhost:3001  (direct)"
+	@echo "  Grafana          → http://localhost:3002  (admin / GF_SECURITY_ADMIN_PASSWORD)"
 	@echo "  Kafka UI         → http://localhost:8080"
 	@echo "  pgAdmin          → http://localhost:5050"
-	@echo "  Mongo Express    → http://localhost:8081"
-	@echo "  Vault UI         → http://localhost:8200  (token: dev-root-token)"
+	@echo "  Mongo Express    → http://localhost:18081"
+	@echo "  Vault UI         → http://localhost:8200  (token: VAULT_TOKEN in .env)"
 	@echo "  Jaeger UI        → http://localhost:16686"
 	@echo "  Kibana           → http://localhost:5601"
 	@echo "  Mailhog          → http://localhost:8025"
@@ -166,7 +203,7 @@ migrate-clean: ## 清除 DB 並重新 migrate（⚠️ 開發環境用）
 .PHONY: seed
 seed: ## 插入測試資料（開發環境）
 	@echo "$(YELLOW)▶ 插入測試種子資料...$(RESET)"
-	@$(COMPOSE) -f $(COMPOSE_FILE) exec postgres psql -U apim_user -d apim -f /seeds/seed.sql
+	@$(COMPOSE) -f $(COMPOSE_FILE) exec -T postgres psql -U apim_user -d apim -f /seeds/seed.sql
 	@echo "$(GREEN)✅ 種子資料插入完成$(RESET)"
 
 .PHONY: db-shell
@@ -212,13 +249,19 @@ test: ## 執行所有服務單元測試
 .PHONY: test-e2e
 test-e2e: ## 執行 E2E 整合測試（需所有服務運行）
 	@echo "$(YELLOW)▶ 執行 E2E 測試...$(RESET)"
-	@$(COMPOSE) -f $(COMPOSE_TEST) up --abort-on-container-exit --exit-code-from test-runner
+	@node --test tests/e2e/*.test.mjs
 
 .PHONY: load-test
 load-test: ## 執行 K6 壓力測試
 	@echo "$(YELLOW)▶ 執行壓力測試...$(RESET)"
-	@docker run --rm --network=xcloudapim_default \
-	  -v $(PWD)/tests/k6:/scripts grafana/k6 run /scripts/gateway_throughput.js
+	@docker run --rm --network=xcloudapim_apim-net \
+	  -e AUTH_URL=http://auth-service:8081 \
+	  -e REGISTRY_URL=http://registry-service:8082 \
+	  -e BFF_URL=http://bff:4000 \
+	  -e GW_URL=http://gateway:8080 \
+	  -e TEST_API_KEY=$${TEST_API_KEY:-xcapim_dev_key_1234567890} \
+	  -e TEST_PATH=$${TEST_PATH:-/dev/echo/v1/anything} \
+	  -v $(PWD)/load-tests:/scripts:ro grafana/k6 run /scripts/scenarios/smoke.js
 
 # ═══════════════════════════════════════════════════════════════
 #  LINT & FORMAT
@@ -335,12 +378,22 @@ gateway-logs: ## 追蹤 gateway 容器 logs
 #  PRODUCTION
 # ═══════════════════════════════════════════════════════════════
 .PHONY: prod-up
-prod-up: ## 以生產設定啟動服務
-	@$(COMPOSE) -f $(COMPOSE_PROD) up -d
+prod-up: ## 以生產設定啟動服務（overlay docker-compose.prod.yml）
+	@$(COMPOSE) -f $(COMPOSE_FILE) -f $(COMPOSE_PROD) up -d
 
 .PHONY: prod-down
 prod-down: ## 停止生產服務
-	@$(COMPOSE) -f $(COMPOSE_PROD) down
+	@$(COMPOSE) -f $(COMPOSE_FILE) -f $(COMPOSE_PROD) down
+
+.PHONY: test-env-up
+test-env-up: ## 啟動最小化測試環境（CI 整合測試用）
+	@echo "$(YELLOW)▶ 啟動測試環境...$(RESET)"
+	@$(COMPOSE) -f $(COMPOSE_TEST) up -d
+	@echo "$(GREEN)✅ 測試環境啟動完成$(RESET)"
+
+.PHONY: test-env-down
+test-env-down: ## 停止並移除測試環境
+	@$(COMPOSE) -f $(COMPOSE_TEST) down -v
 
 # ═══════════════════════════════════════════════════════════════
 #  CLEAN
@@ -367,7 +420,7 @@ prune: ## 清除未使用的 Docker 資源
 #  K6 LOAD TESTS
 # ═══════════════════════════════════════════════════════════════
 K6_COMPOSE := -f $(COMPOSE_FILE) -f load-tests/docker-compose.k6.yml
-K6_ENVS    := TEST_API_KEY=$(TEST_API_KEY) TEST_PATH=$(TEST_PATH:-/petstore/v1/pets) TARGET_API_ID=$(TARGET_API_ID)
+K6_ENVS    := TEST_API_KEY=$(TEST_API_KEY) TEST_PATH=$(or $(TEST_PATH),/dev/echo/v1/anything) TARGET_API_ID=$(TARGET_API_ID)
 
 .PHONY: k6-infra-up
 k6-infra-up: ## 啟動 InfluxDB（K6 metrics store）
@@ -379,8 +432,8 @@ k6-infra-up: ## 啟動 InfluxDB（K6 metrics store）
 k6-smoke: k6-infra-up ## 執行 Smoke Test（1 VU, 2 min — CI gate）
 	@echo "$(YELLOW)▶ K6 Smoke Test...$(RESET)"
 	@$(COMPOSE) $(K6_COMPOSE) run --rm \
-	  -e TEST_API_KEY=$(TEST_API_KEY) \
-	  -e TEST_PATH=$(or $(TEST_PATH),/petstore/v1/pets) \
+	  -e TEST_API_KEY=$(or $(TEST_API_KEY),xcapim_dev_key_1234567890) \
+	  -e TEST_PATH=$(or $(TEST_PATH),/dev/echo/v1/anything) \
 	  k6 run /scripts/scenarios/smoke.js
 	@echo "$(GREEN)✅ Smoke Test 完成$(RESET)"
 
@@ -388,8 +441,8 @@ k6-smoke: k6-infra-up ## 執行 Smoke Test（1 VU, 2 min — CI gate）
 k6-load: k6-infra-up ## 執行 Load Test（50→100 VU, 9 min）
 	@echo "$(YELLOW)▶ K6 Load Test...$(RESET)"
 	@$(COMPOSE) $(K6_COMPOSE) run --rm \
-	  -e TEST_API_KEY=$(TEST_API_KEY) \
-	  -e TEST_PATH=$(or $(TEST_PATH),/petstore/v1/pets) \
+	  -e TEST_API_KEY=$(or $(TEST_API_KEY),xcapim_dev_key_1234567890) \
+	  -e TEST_PATH=$(or $(TEST_PATH),/dev/echo/v1/anything) \
 	  -e TARGET_API_ID=$(TARGET_API_ID) \
 	  k6 run /scripts/scenarios/load.js
 	@echo "$(GREEN)✅ Load Test 完成$(RESET)"
@@ -398,16 +451,16 @@ k6-load: k6-infra-up ## 執行 Load Test（50→100 VU, 9 min）
 k6-stress: k6-infra-up ## 執行 Stress Test（破壞點測試，最高 400 VU）
 	@echo "$(YELLOW)▶ K6 Stress Test — 此測試會讓系統超載$(RESET)"
 	@$(COMPOSE) $(K6_COMPOSE) run --rm \
-	  -e TEST_API_KEY=$(TEST_API_KEY) \
-	  -e TEST_PATH=$(or $(TEST_PATH),/petstore/v1/pets) \
+	  -e TEST_API_KEY=$(or $(TEST_API_KEY),xcapim_dev_key_1234567890) \
+	  -e TEST_PATH=$(or $(TEST_PATH),/dev/echo/v1/anything) \
 	  k6 run /scripts/scenarios/stress.js
 
 .PHONY: k6-soak
 k6-soak: k6-infra-up ## 執行 Soak Test（20 VU, 2h 耐久）
 	@echo "$(YELLOW)▶ K6 Soak Test（預設 2h，可用 DURATION=30m 覆蓋）...$(RESET)"
 	@$(COMPOSE) $(K6_COMPOSE) run --rm \
-	  -e TEST_API_KEY=$(TEST_API_KEY) \
-	  -e TEST_PATH=$(or $(TEST_PATH),/petstore/v1/pets) \
+	  -e TEST_API_KEY=$(or $(TEST_API_KEY),xcapim_dev_key_1234567890) \
+	  -e TEST_PATH=$(or $(TEST_PATH),/dev/echo/v1/anything) \
 	  -e DURATION=$(or $(DURATION),2h) \
 	  k6 run /scripts/scenarios/soak.js
 
@@ -415,7 +468,7 @@ k6-soak: k6-infra-up ## 執行 Soak Test（20 VU, 2h 耐久）
 k6-flow: k6-infra-up ## 執行 API Flow Test（端對端使用者旅程）
 	@echo "$(YELLOW)▶ K6 API Flow Test...$(RESET)"
 	@$(COMPOSE) $(K6_COMPOSE) run --rm \
-	  -e TEST_PATH=$(or $(TEST_PATH),/petstore/v1/pets) \
+	  -e TEST_PATH=$(or $(TEST_PATH),/dev/echo/v1/anything) \
 	  k6 run /scripts/scenarios/api-flow.js
 
 .PHONY: k6-report
@@ -430,7 +483,7 @@ obs-up: ## 啟動完整 Observability stack（Prometheus + Grafana + Jaeger + Al
 	@echo "$(YELLOW)▶ 啟動 Observability Stack...$(RESET)"
 	@$(COMPOSE) -f $(COMPOSE_FILE) up -d prometheus grafana jaeger alertmanager influxdb-k6
 	@echo "$(GREEN)✅ Observability Stack 啟動完成$(RESET)"
-	@echo "  Grafana:      http://localhost:3002  (admin/admin)"
+	@echo "  Grafana:      http://localhost:3002  (admin / GF_SECURITY_ADMIN_PASSWORD)"
 	@echo "  Prometheus:   http://localhost:9090"
 	@echo "  Alertmanager: http://localhost:9093"
 	@echo "  Jaeger:       http://localhost:16686"
@@ -449,28 +502,12 @@ alerts: ## 列出目前觸發中的 Prometheus alerts
 
 .PHONY: exporters-up
 exporters-up: ## 啟動所有 Prometheus exporters
-	@$(COMPOSE) -f $(COMPOSE_FILE) up -d postgres-exporter redis-exporter node-exporter nginx-exporter
+	@$(COMPOSE) -f $(COMPOSE_FILE) up -d postgres-exporter redis-exporter node-exporter nginx-exporter kafka-exporter
 	@echo "$(GREEN)✅ Exporters 啟動$(RESET)"
 
 # ═══════════════════════════════════════════════════════════════
 #  CI (local simulation)
 # ═══════════════════════════════════════════════════════════════
-.PHONY: lint
-lint: ## 執行所有服務的 lint（Go + Node.js）
-	@echo "$(YELLOW)▶ Go lint (golangci-lint)...$(RESET)"
-	@for svc in auth registry subscription; do \
-	  echo "  → manager/services/$$svc"; \
-	  cd manager/services/$$svc && golangci-lint run ./... && cd ../../..; \
-	done
-	@echo "  → policy-engine"
-	@cd policy-engine && golangci-lint run ./... && cd ..
-	@echo "$(YELLOW)▶ Node lint (eslint)...$(RESET)"
-	@for svc in gateway manager/bff studio portal; do \
-	  echo "  → $$svc"; \
-	  cd $$svc && npm run lint --if-present && cd $$(echo $$svc | sed 's|[^/]*/||g' | tr -dc '/' | sed 's|/|../|g')..; \
-	done
-	@echo "$(GREEN)✅ Lint 完成$(RESET)"
-
 .PHONY: typecheck
 typecheck: ## TypeScript 型別檢查（gateway, bff, studio, portal）
 	@echo "$(YELLOW)▶ Type checking...$(RESET)"
@@ -481,14 +518,9 @@ typecheck: ## TypeScript 型別檢查（gateway, bff, studio, portal）
 	@echo "$(GREEN)✅ Typecheck 完成$(RESET)"
 
 .PHONY: test-go
-test-go: ## 執行所有 Go 服務的單元測試
+test-go: ## 執行所有 Go 服務的單元測試（本機預設不開 race；GO_TEST_RACE=1 可啟用）
 	@echo "$(YELLOW)▶ Go tests...$(RESET)"
-	@for svc in auth registry subscription; do \
-	  echo "  → manager/services/$$svc"; \
-	  cd manager/services/$$svc && go test -race ./... && cd ../../..; \
-	done
-	@echo "  → policy-engine"
-	@cd policy-engine && go test -race ./... && cd ..
+	@bash scripts/go-test.sh
 	@echo "$(GREEN)✅ Go tests 完成$(RESET)"
 
 .PHONY: ci-local

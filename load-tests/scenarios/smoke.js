@@ -10,7 +10,7 @@ import { listAPIs, gqlQuery, GQL_LIST_APIS } from '../libs/api.js'
 
 const REGISTRY_URL = __ENV.REGISTRY_URL || 'http://localhost:8082'
 const API_KEY      = __ENV.TEST_API_KEY  || ''
-const TEST_PATH    = __ENV.TEST_PATH     || '/petstore/v1/pets'
+const TEST_PATH    = __ENV.TEST_PATH     || '/dev/echo/v1/anything'
 
 export const options = {
   vus:      1,

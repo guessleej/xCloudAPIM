@@ -40,7 +40,7 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 	// ─── Gateway / Internal endpoints (InternalAuth) ─────────
 	internal := r.Group("", middleware.InternalAuth())
 	{
-		internal.GET("/v1/chains/:apiId",      h.GetGatewayChain)
+		internal.GET("/internal/chains/:id",     h.GetGatewayChain)
 		internal.POST("/v1/cache/invalidate",  h.InvalidateCache)
 	}
 

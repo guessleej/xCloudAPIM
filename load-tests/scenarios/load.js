@@ -16,7 +16,7 @@ import { listAPIs, getAPI, gqlQuery, GQL_LIST_APIS, GQL_DASHBOARD } from '../lib
 
 const REGISTRY_URL = __ENV.REGISTRY_URL || 'http://localhost:8082'
 const API_KEY      = __ENV.TEST_API_KEY  || ''
-const TEST_PATH    = __ENV.TEST_PATH     || '/petstore/v1/pets'
+const TEST_PATH    = __ENV.TEST_PATH     || '/dev/echo/v1/anything'
 const TARGET_API   = __ENV.TARGET_API_ID || ''
 
 export const options = {

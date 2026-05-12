@@ -6,25 +6,28 @@ interface Plan {
   id:           string
   name:         string
   description:  string | null
-  isFree:       boolean
+  isPublic:     boolean
   price?:       number
-  rateLimit:    { rpm: number; rph: number; rpd: number } | null
-  quotaLimit:   { daily: number; monthly: number } | null
+  rpmLimit:     number
+  rphLimit:     number
+  rpdLimit:     number
 }
 
 interface Props {
   plan:        Plan
+  apiId:       string
+  orgId:       string
   isLoggedIn:  boolean
   alreadySub:  boolean
   featured?:   boolean
 }
 
-export default function PlanCard({ plan, isLoggedIn, alreadySub, featured }: Props) {
+export default function PlanCard({ plan, apiId, orgId, isLoggedIn, alreadySub, featured }: Props) {
   const features: string[] = []
-  if (plan.rateLimit?.rpm) features.push(`${plan.rateLimit.rpm.toLocaleString()} RPM`)
-  if (plan.rateLimit?.rpd) features.push(`${plan.rateLimit.rpd.toLocaleString()} RPD`)
-  if (plan.quotaLimit?.monthly) features.push(`${plan.quotaLimit.monthly.toLocaleString()} 次/月`)
-  if (plan.isFree)  features.push('永久免費')
+  if (plan.rpmLimit) features.push(`${plan.rpmLimit.toLocaleString()} RPM`)
+  if (plan.rphLimit) features.push(`${plan.rphLimit.toLocaleString()} RPH`)
+  if (plan.rpdLimit) features.push(`${plan.rpdLimit.toLocaleString()} RPD`)
+  if (!plan.price) features.push('永久免費')
 
   return (
     <Card
@@ -45,7 +48,7 @@ export default function PlanCard({ plan, isLoggedIn, alreadySub, featured }: Pro
       </div>
 
       <div className="mb-5">
-        {plan.isFree ? (
+        {!plan.price ? (
           <span className="text-3xl font-bold text-gray-900">免費</span>
         ) : (
           <div>
@@ -66,7 +69,7 @@ export default function PlanCard({ plan, isLoggedIn, alreadySub, featured }: Pro
         ))}
       </ul>
 
-      <SubscribeButton plan={plan} isLoggedIn={isLoggedIn} alreadySubbed={alreadySub} />
+      <SubscribeButton plan={plan} apiId={apiId} orgId={orgId} isLoggedIn={isLoggedIn} alreadySubbed={alreadySub} />
     </Card>
   )
 }

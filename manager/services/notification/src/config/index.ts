@@ -8,7 +8,7 @@ const schema = z.object({
   KAFKA_GROUP_ID:  z.string().default('notification-service'),
   KAFKA_CLIENT_ID: z.string().default('notification-service'),
 
-  MONGO_URI: z.string().default('mongodb://apim_user:mongo_pass_dev@mongodb:27017/apim_analytics?authSource=admin'),
+  MONGO_URI: z.string().url(),
   MONGO_DB:  z.string().default('apim_analytics'),
 
   REDIS_HOST:     z.string().default('redis-master-1'),

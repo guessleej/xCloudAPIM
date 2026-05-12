@@ -17,13 +17,16 @@ export default async function KeysPage({ params }: Props) {
   if (!session) return null
 
   let subscription: {
-    id: string; appName: string; status: string
+    id: string; status: string
     plan: {
       name: string; description: string | null
-      rateLimit: { rpm: number; rph: number; rpd: number } | null
-      api: { id: string; name: string; basePath: string; version: string; description: string | null }
-    }
-    apiKeys: Array<{ id: string; name: string; keyPrefix: string; status: string; createdAt: string; lastUsedAt: string | null }>
+      rpmLimit: number; rphLimit: number; rpdLimit: number
+    } | null
+    api: { id: string; name: string; basePath: string; version: string; description: string | null } | null
+    apiKeys: Array<{
+      id: string; subscriptionId: string; name: string; keyPrefix: string
+      status: string; createdAt: string; lastUsedAt: string | null; plainKey?: string | null
+    }>
   } | null = null
 
   try {
@@ -41,7 +44,7 @@ export default async function KeysPage({ params }: Props) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">{subscription.appName}</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{subscription.api?.name ?? 'API Key 管理'}</h1>
         <div className="flex flex-wrap items-center gap-2 mt-1.5">
           <Badge
             variant={subscription.status === 'ACTIVE' ? 'success' : 'default'}
@@ -50,21 +53,21 @@ export default async function KeysPage({ params }: Props) {
             {subscription.status}
           </Badge>
           <span className="text-sm text-gray-500">
-            {subscription.plan?.api?.name} · {subscription.plan?.name}
+            {subscription.api?.version} · {subscription.plan?.name}
           </span>
-          <span className="text-xs font-mono text-gray-400">{subscription.plan?.api?.basePath}</span>
+          <span className="text-xs font-mono text-gray-400">{subscription.api?.basePath}</span>
         </div>
       </div>
 
       {/* Rate limits */}
-      {subscription.plan?.rateLimit && (
+      {subscription.plan && (
         <Card>
           <h2 className="font-semibold text-sm text-gray-700 mb-3">速率限制</h2>
           <div className="flex flex-wrap gap-4">
             {[
-              { label: 'RPM', value: subscription.plan.rateLimit.rpm },
-              { label: 'RPH', value: subscription.plan.rateLimit.rph },
-              { label: 'RPD', value: subscription.plan.rateLimit.rpd },
+              { label: 'RPM', value: subscription.plan.rpmLimit },
+              { label: 'RPH', value: subscription.plan.rphLimit },
+              { label: 'RPD', value: subscription.plan.rpdLimit },
             ].filter((x) => x.value).map(({ label, value }) => (
               <div key={label} className="text-center">
                 <div className="text-2xl font-bold text-gray-900">{value.toLocaleString()}</div>

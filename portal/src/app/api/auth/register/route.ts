@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { ApolloClient, InMemoryCache, HttpLink } from '@apollo/client'
 import { createSession, setSessionCookie } from '@/lib/auth'
-import { REGISTER } from '@/lib/graphql/mutations'
 
-const bffClient = new ApolloClient({
-  cache: new InMemoryCache(),
-  link:  new HttpLink({ uri: process.env.BFF_URL ?? 'http://localhost:4000/graphql' }),
-  ssrMode: true,
-})
+const AUTH_SERVICE_URL = process.env.AUTH_SERVICE_URL ?? 'http://localhost:8081'
+
+interface AuthRegisterResponse {
+  session_token: string
+  user: {
+    id:           string
+    email:        string
+    display_name: string
+    org_id:       string
+    org_name:     string
+    role:         string
+  }
+}
 
 export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}))
@@ -21,23 +27,25 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { data, errors } = await bffClient.mutate({
-      mutation:  REGISTER,
-      variables: { input: { name, email, password, orgName } },
+    const res = await fetch(`${AUTH_SERVICE_URL}/auth/register`, {
+      method:  'POST',
+      headers: { 'content-type': 'application/json' },
+      body:    JSON.stringify({ name, email, password, orgName }),
+      cache:   'no-store',
     })
 
-    if (errors?.length) {
-      return NextResponse.json({ message: errors[0].message }, { status: 422 })
+    const data = await res.json().catch(() => ({})) as Partial<AuthRegisterResponse> & { error?: string; message?: string }
+    if (!res.ok || !data.session_token || !data.user) {
+      return NextResponse.json({ message: data.message ?? data.error ?? '註冊失敗' }, { status: res.status || 422 })
     }
 
-    const { token, user } = data.register
     const sessionJwt = await createSession({
-      sub:   user.id,
-      email: user.email,
-      name:  user.name,
-      orgId: '',
-      role:  user.role,
-      token,
+      sub:   data.user.id,
+      email: data.user.email,
+      name:  data.user.display_name || data.user.email,
+      orgId: data.user.org_id ?? '',
+      role:  data.user.role,
+      token: data.session_token,
     })
 
     await setSessionCookie(sessionJwt)

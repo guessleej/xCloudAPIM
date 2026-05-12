@@ -23,10 +23,6 @@ func VerifyPKCE(codeVerifier, codeChallenge, method string) error {
 		if computed != codeChallenge {
 			return domain.ErrPKCEVerifyFailed
 		}
-	case "PLAIN":
-		if codeVerifier != codeChallenge {
-			return domain.ErrPKCEVerifyFailed
-		}
 	default:
 		return domain.ErrInvalidRequest("unsupported code_challenge_method: " + method)
 	}

@@ -33,6 +33,7 @@ function makeClient(authToken?: string) {
   }))
 
   return new ApolloClient({
+    devtools: { enabled: false },
     cache: new InMemoryCache({
       typePolicies: {
         Query: {

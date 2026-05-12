@@ -24,12 +24,12 @@ type Handlers struct {
 }
 
 func NewHandlers(
-	authService    *service.AuthService,
+	authService *service.AuthService,
 	sessionService *service.SessionService,
 	rateLimitStore service.RateLimitStore,
-	db             *repository.DB,
-	redisCache     *cache.RedisCache,
-	logger         *zap.Logger,
+	db *repository.DB,
+	redisCache *cache.RedisCache,
+	logger *zap.Logger,
 ) *Handlers {
 	return &Handlers{
 		authService:    authService,
@@ -53,16 +53,17 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 	r.Use(corsMiddleware())
 
 	// ─── Health / Metrics ─────────────────────────────────────
-	r.GET("/health",  h.Health)
-	r.GET("/ready",   h.Ready)
+	r.GET("/health", h.Health)
+	r.GET("/ready", h.Ready)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// ─── 使用者登入端點（rate limit: 10 req/min/IP）────────────
 	auth := r.Group("/auth")
 	{
-		auth.POST("/login",  rateLimitMiddleware(h.rateLimitStore, 10, "rl:login"), h.Login)
+		auth.POST("/register", rateLimitMiddleware(h.rateLimitStore, 5, "rl:register"), h.Register)
+		auth.POST("/login", rateLimitMiddleware(h.rateLimitStore, 10, "rl:login"), h.Login)
 		auth.POST("/logout", h.requireSession(), h.Logout)
-		auth.GET( "/me",     h.requireSession(), h.Me)
+		auth.GET("/me", h.requireSession(), h.Me)
 	}
 
 	// ─── OAuth2 Endpoints ─────────────────────────────────────
@@ -71,10 +72,10 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 		// authorize 需要已登入的 session token
 		oauth.GET("/authorize", h.requireSession(), h.Authorize)
 		// token/revoke: rate limit 20 req/min/IP
-		oauth.POST("/token",  rateLimitMiddleware(h.rateLimitStore, 20, "rl:token"), h.Token)
+		oauth.POST("/token", rateLimitMiddleware(h.rateLimitStore, 20, "rl:token"), h.Token)
 		oauth.POST("/revoke", rateLimitMiddleware(h.rateLimitStore, 20, "rl:token"), h.Revoke)
-		oauth.GET( "/jwks",   h.JWKS)
-		oauth.GET( "/.well-known/openid-configuration", h.OpenIDConfig)
+		oauth.GET("/jwks", h.JWKS)
+		oauth.GET("/.well-known/openid-configuration", h.OpenIDConfig)
 	}
 
 	r.NoRoute(func(c *gin.Context) {
@@ -106,7 +107,9 @@ func securityHeaders() gin.HandlerFunc {
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("X-XSS-Protection", "1; mode=block")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		if c.Request.TLS != nil || c.GetHeader("X-Forwarded-Proto") == "https" {
+			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		c.Header("Cache-Control", "no-store")
 		c.Header("Pragma", "no-cache")
 		c.Next()

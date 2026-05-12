@@ -11,8 +11,9 @@ import CancelSubscriptionButton from '@/components/dashboard/CancelSubscriptionB
 export const metadata: Metadata = { title: '我的訂閱' }
 
 type Sub = {
-  id: string; appName: string; status: string; createdAt: string
-  plan: { id: string; name: string; api: { id: string; name: string; basePath: string; version: string } }
+  id: string; status: string; createdAt: string
+  plan: { id: string; name: string } | null
+  api: { id: string; name: string; basePath: string; version: string } | null
   apiKeys: Array<{ id: string; name: string; keyPrefix: string; status: string }>
 }
 
@@ -52,7 +53,7 @@ export default async function SubscriptionsPage() {
               <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <span className="font-semibold text-gray-900">{sub.appName}</span>
+                    <span className="font-semibold text-gray-900">{sub.api?.name ?? 'API 訂閱'}</span>
                     <Badge
                       variant={
                         sub.status === 'ACTIVE'    ? 'success' :
@@ -64,11 +65,11 @@ export default async function SubscriptionsPage() {
                     </Badge>
                   </div>
                   <p className="text-sm text-gray-500">
-                    {sub.plan?.api?.name}
+                    {sub.api?.version ?? 'v1'}
                     <span className="text-gray-300 mx-1.5">·</span>
                     <span className="font-medium text-gray-700">{sub.plan?.name}</span>
                     <span className="text-gray-300 mx-1.5">·</span>
-                    <span className="font-mono text-xs">{sub.plan?.api?.basePath}</span>
+                    <span className="font-mono text-xs">{sub.api?.basePath}</span>
                   </p>
                   <p className="text-xs text-gray-400 mt-1">
                     建立於 {new Date(sub.createdAt).toLocaleDateString('zh-TW')}
@@ -83,7 +84,7 @@ export default async function SubscriptionsPage() {
                     <Key size={12} /> {sub.apiKeys?.length ?? 0} 個金鑰
                   </Link>
                   <Link
-                    href={`/apis/${sub.plan?.api?.id}`}
+                    href={`/apis/${sub.api?.id}`}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
                     <ExternalLink size={12} /> API 文件

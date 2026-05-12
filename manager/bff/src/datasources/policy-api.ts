@@ -35,11 +35,11 @@ export interface PublishChainInput {
 export class PolicyAPI {
   private client: ServiceClient
 
-  constructor(log: Logger, authHeader?: string) {
+  constructor(log: Logger, extraHeaders?: Record<string, string>) {
     this.client = new ServiceClient(
       config.POLICY_ENGINE_URL,
       log,
-      authHeader ? { authorization: authHeader } : {},
+      extraHeaders,
     )
   }
 

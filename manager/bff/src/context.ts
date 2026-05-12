@@ -2,7 +2,7 @@
  * Apollo Server 4 Context — 每個請求建立獨立的 datasource instances
  * Auth middleware 在這裡驗 JWT，解出 user 資訊
  */
-import { createRemoteJWKSet, jwtVerify } from 'jose'
+import { createRemoteJWKSet, decodeProtectedHeader, jwtVerify } from 'jose'
 import DataLoader from 'dataloader'
 import type { Logger } from 'pino'
 import { config } from './config/index.js'
@@ -14,6 +14,9 @@ import { PolicyAPI } from './datasources/policy-api.js'
 // ─── JWKS 快取（module scope，跨請求共享）─────────────────────
 let jwksSet: ReturnType<typeof createRemoteJWKSet> | null = null
 let jwksFetchedAt = 0
+const sessionSecret = config.SESSION_SECRET
+  ? new TextEncoder().encode(config.SESSION_SECRET)
+  : null
 
 function getJWKS(): ReturnType<typeof createRemoteJWKSet> {
   if (!jwksSet || Date.now() - jwksFetchedAt > config.JWKS_CACHE_TTL_MS) {
@@ -61,10 +64,14 @@ export async function buildContext(
   if (authHeader?.toLowerCase().startsWith('bearer ')) {
     const token = authHeader.slice(7).trim()
     try {
-      const { payload } = await jwtVerify(token, getJWKS(), {
-        issuer:   config.JWT_ISSUER   || undefined,
-        audience: config.JWT_AUDIENCE || undefined,
-      })
+      const header = decodeProtectedHeader(token)
+      const { payload } =
+        header.alg?.startsWith('HS') && sessionSecret
+          ? await jwtVerify(token, sessionSecret, { issuer: 'auth-service-session' })
+          : await jwtVerify(token, getJWKS(), {
+              issuer:   config.JWT_ISSUER   || undefined,
+              audience: config.JWT_AUDIENCE || undefined,
+            })
       user = {
         id:    String(payload['uid'] ?? payload.sub ?? ''),
         email: String(payload['email'] ?? ''),
@@ -78,10 +85,14 @@ export async function buildContext(
   }
 
   // ─── Datasource instances ─────────────────────────────────
+  const identityHeaders: Record<string, string> = {}
+  if (user?.id) identityHeaders['x-user-id'] = user.id
+  if (user?.orgId) identityHeaders['x-org-id'] = user.orgId
+
   const authAPI         = new AuthAPI(log, authHeader)
-  const registryAPI     = new RegistryAPI(log, authHeader)
-  const subscriptionAPI = new SubscriptionAPI(log, authHeader)
-  const policyAPI       = new PolicyAPI(log, authHeader)
+  const registryAPI     = new RegistryAPI(log, identityHeaders)
+  const subscriptionAPI = new SubscriptionAPI(log, identityHeaders)
+  const policyAPI       = new PolicyAPI(log, identityHeaders)
 
   // ─── DataLoaders ──────────────────────────────────────────
   const loaders = {

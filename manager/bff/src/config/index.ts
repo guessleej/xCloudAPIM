@@ -15,6 +15,7 @@ const schema = z.object({
   JWKS_CACHE_TTL_MS:        z.coerce.number().default(300_000),
   JWT_ISSUER:               z.string().default(''),
   JWT_AUDIENCE:             z.string().default(''),
+  SESSION_SECRET:           z.string().default(''),
 
   // GraphQL
   GRAPHQL_PATH:             z.string().default('/graphql'),

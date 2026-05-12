@@ -2,19 +2,20 @@
 import { useState } from 'react'
 import { useMutation } from '@apollo/client'
 import { useRouter } from 'next/navigation'
-import { Eye, EyeOff, Copy, Check, RefreshCw, Trash2, Clock } from 'lucide-react'
-import { REVOKE_API_KEY, ROTATE_API_KEY } from '@/lib/graphql/mutations'
+import { Eye, EyeOff, Copy, Check, Trash2, Clock } from 'lucide-react'
+import { REVOKE_API_KEY } from '@/lib/graphql/mutations'
 import Badge from '@/components/ui/Badge'
 import Card from '@/components/ui/Card'
 
 interface APIKey {
   id:          string
+  subscriptionId: string
   name:        string
   keyPrefix:   string
   status:      string
   createdAt:   string
   lastUsedAt:  string | null
-  plainKey?:   string   // present right after creation
+  plainKey?:   string | null   // present right after creation
 }
 
 interface Props {
@@ -29,17 +30,8 @@ export default function APIKeyCard({ apiKey }: Props) {
   const [confirmRevoke, setConfirmRevoke] = useState(false)
 
   const [revoke,  { loading: revoking }] = useMutation(REVOKE_API_KEY, {
-    variables:   { id: apiKey.id },
+    variables:   { subscriptionId: apiKey.subscriptionId, id: apiKey.id },
     onCompleted: () => router.refresh(),
-  })
-
-  const [rotate, { loading: rotating }] = useMutation(ROTATE_API_KEY, {
-    variables:   { id: apiKey.id },
-    onCompleted: (data) => {
-      setPlainKey(data.rotateAPIKey.plainKey)
-      setRevealed(true)
-      router.refresh()
-    },
   })
 
   const displayKey = plainKey
@@ -109,15 +101,6 @@ export default function APIKeyCard({ apiKey }: Props) {
         {/* Actions */}
         {!isRevoked && (
           <div className="flex flex-wrap sm:flex-col gap-1.5 shrink-0">
-            <button
-              onClick={() => rotate()}
-              disabled={rotating}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw size={12} className={rotating ? 'animate-spin' : ''} />
-              輪換金鑰
-            </button>
-
             {!confirmRevoke ? (
               <button
                 onClick={() => setConfirmRevoke(true)}

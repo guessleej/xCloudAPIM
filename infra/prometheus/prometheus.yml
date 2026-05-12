@@ -25,42 +25,32 @@ scrape_configs:
   - job_name: gateway
     metrics_path: /metrics
     static_configs:
-      - targets: ['gateway:9464']
+      - targets: ['gateway:8080']
 
   - job_name: auth-service
     metrics_path: /metrics
     static_configs:
-      - targets: ['auth-service:9465']
+      - targets: ['auth-service:8081']
 
   - job_name: registry-service
     metrics_path: /metrics
     static_configs:
-      - targets: ['registry-service:9466']
-
-  - job_name: policy-engine
-    metrics_path: /metrics
-    static_configs:
-      - targets: ['policy-engine:9467']
+      - targets: ['registry-service:8082']
 
   - job_name: subscription-service
     metrics_path: /metrics
     static_configs:
-      - targets: ['subscription-service:9468']
+      - targets: ['subscription-service:8084']
 
   - job_name: analytics-service
     metrics_path: /metrics
     static_configs:
-      - targets: ['analytics-service:9469']
+      - targets: ['analytics-service:8085']
 
   - job_name: notification-service
     metrics_path: /metrics
     static_configs:
-      - targets: ['notification-service:9470']
-
-  - job_name: bff
-    metrics_path: /metrics
-    static_configs:
-      - targets: ['bff:9471']
+      - targets: ['notification-service:8086']
 
   - job_name: postgres
     static_configs:

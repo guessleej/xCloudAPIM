@@ -1,5 +1,5 @@
 # ─── Build Stage ──────────────────────────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS builder
+FROM node:20.19-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --ignore-scripts
@@ -9,7 +9,7 @@ RUN npm run build
 RUN npm ci --omit=dev --ignore-scripts
 
 # ─── Runtime Stage ────────────────────────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS runtime
+FROM node:20.19-alpine AS runtime
 RUN apk add --no-cache dumb-init=1.2.5-r3 curl && \
     addgroup -S appgroup -g 1001 && \
     adduser  -S appuser -G appgroup -u 1001 -H -s /sbin/nologin

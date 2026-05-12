@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const config = {
   output: 'standalone',
-  typescript: { ignoreBuildErrors: true },
-  eslint:     { ignoreDuringBuilds: true },
   reactStrictMode: true,
   logging: { fetches: { fullUrl: true } },
 

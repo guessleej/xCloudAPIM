@@ -2,12 +2,20 @@ import type { BffContext } from '../context.js'
 import type { OrgDTO, UserDTO } from '../datasources/auth-api.js'
 import { requireAuth } from './helpers.js'
 
+function normalizeRole(role: string): string {
+  const normalized = role.toLowerCase()
+  if (normalized === 'admin') return 'ORG_ADMIN'
+  if (normalized === 'super_admin') return 'SUPER_ADMIN'
+  if (normalized === 'developer') return 'DEVELOPER'
+  return 'VIEWER'
+}
+
 function mapUser(u: UserDTO) {
   return {
     id:        u.id,
     email:     u.email,
     name:      u.name,
-    role:      u.role.toUpperCase(),
+    role:      normalizeRole(u.role),
     orgId:     u.org_id,
     createdAt: u.created_at,
     updatedAt: u.updated_at,
@@ -154,11 +162,11 @@ function mapAPIFlat(a: import('../datasources/registry-api.js').APIDTO) {
 function mapSubFlat(s: import('../datasources/subscription-api.js').SubscriptionDTO) {
   return {
     id:        s.id,
-    orgId:     s.org_id,
+    orgId:     s.organization_id,
     planId:    s.plan_id,
     apiId:     s.api_id,
     status:    s.status.toUpperCase(),
-    expiresAt: s.expires_at,
+    expiresAt: s.end_date,
     createdAt: s.created_at,
     updatedAt: s.updated_at,
   }

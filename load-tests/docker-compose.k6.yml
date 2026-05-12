@@ -27,10 +27,10 @@ services:
     environment:
       DOCKER_INFLUXDB_INIT_MODE:        setup
       DOCKER_INFLUXDB_INIT_USERNAME:    admin
-      DOCKER_INFLUXDB_INIT_PASSWORD:    influx_k6_pass
+      DOCKER_INFLUXDB_INIT_PASSWORD:    ${INFLUXDB_K6_PASSWORD:?INFLUXDB_K6_PASSWORD is required}
       DOCKER_INFLUXDB_INIT_ORG:         xcloudapim
       DOCKER_INFLUXDB_INIT_BUCKET:      k6
-      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: k6-super-secret-token
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUXDB_K6_ADMIN_TOKEN:?INFLUXDB_K6_ADMIN_TOKEN is required}
     ports:
       - "8086:8086"
     volumes:
@@ -52,7 +52,7 @@ services:
     networks:
       - apim-net
     environment:
-      K6_OUT:              influxdb=http://influxdb-k6:8086/k6?org=xcloudapim&token=k6-super-secret-token
+      K6_OUT:              influxdb=http://influxdb-k6:8086/k6?org=xcloudapim&token=${INFLUXDB_K6_ADMIN_TOKEN:?INFLUXDB_K6_ADMIN_TOKEN is required}
       AUTH_URL:            http://auth-service:8081
       REGISTRY_URL:        http://registry-service:8082
       SUBSCRIPTION_URL:    http://subscription-service:8084
@@ -60,7 +60,7 @@ services:
       GW_URL:              http://gateway:8080
       TEST_API_KEY:        ${TEST_API_KEY:-}
       TARGET_API_ID:       ${TARGET_API_ID:-}
-      TEST_PATH:           ${TEST_PATH:-/petstore/v1/pets}
+      TEST_PATH:           ${TEST_PATH:-/dev/echo/v1/anything}
     depends_on:
       influxdb-k6:
         condition: service_healthy

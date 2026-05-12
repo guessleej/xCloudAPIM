@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ExternalLink, Tag, BookOpen } from 'lucide-react'
-import { getRscClient } from '@/lib/apollo/client'
+import { getAuthClient, getRscClient } from '@/lib/apollo/client'
 import { GET_API_DETAIL } from '@/lib/graphql/queries'
 import { getSession } from '@/lib/auth'
 import Link from 'next/link'
@@ -9,19 +9,20 @@ import Badge from '@/components/ui/Badge'
 import PlanCard from '@/components/api/PlanCard'
 import SpecViewer from '@/components/api/SpecViewer'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 interface Props {
   params: { id: string }
 }
 
-async function getAPI(id: string) {
+async function getAPI(id: string, token?: string) {
   try {
-    const { data } = await getRscClient().query({
+    const client = token ? getAuthClient(token) : getRscClient()
+    const { data } = await client.query({
       query: GET_API_DETAIL,
       variables: { id },
     })
-    return data?.api ?? null
+    return data?.api ? { ...data.api, plans: data.plans ?? [] } : null
   } catch {
     return null
   }
@@ -36,10 +37,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function APIDetailPage({ params }: Props) {
-  const [api, session] = await Promise.all([
-    getAPI(params.id),
-    getSession(),
-  ])
+  const session = await getSession()
+  const api = await getAPI(params.id, session?.token)
 
   if (!api) notFound()
 
@@ -63,9 +62,9 @@ export default async function APIDetailPage({ params }: Props) {
               </span>
             </div>
             <p className="text-sm text-gray-500 font-mono">{api.basePath}</p>
-            {api.organization && (
+            {api.org && (
               <p className="text-sm text-gray-400 mt-1">
-                提供者：<span className="text-gray-600">{api.organization.name}</span>
+                提供者：<span className="text-gray-600">{api.org.name}</span>
               </p>
             )}
           </div>
@@ -141,6 +140,8 @@ export default async function APIDetailPage({ params }: Props) {
                 <PlanCard
                   key={plan.id}
                   plan={plan}
+                  apiId={api.id}
+                  orgId={session?.orgId ?? ''}
                   isLoggedIn={!!session}
                   alreadySub={false}
                   featured={idx === 1}

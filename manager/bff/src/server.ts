@@ -39,7 +39,7 @@ export async function buildServer(log: Logger): Promise<http.Server> {
     resolvers,
     introspection: config.INTROSPECTION_ENABLED,
     plugins: [
-      depthLimitPlugin(config.GRAPHQL_MAX_DEPTH),
+      depthLimitPlugin(config.GRAPHQL_MAX_DEPTH, config.GRAPHQL_MAX_COMPLEXITY),
       config.NODE_ENV === 'production'
         ? ApolloServerPluginLandingPageDisabled()
         : ApolloServerPluginLandingPageLocalDefault({ embed: true }),

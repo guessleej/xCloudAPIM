@@ -48,7 +48,7 @@ func Load() (*Config, error) {
 				getEnv("POSTGRES_HOST", "localhost"),
 				getEnv("POSTGRES_PORT", "5432"),
 				getEnv("POSTGRES_USER", "apim_user"),
-				getEnv("POSTGRES_PASSWORD", "apim_pass_dev"),
+				getEnv("POSTGRES_PASSWORD", ""),
 				getEnv("POSTGRES_DB", "apim"),
 				getEnv("POSTGRES_SSL_MODE", "disable"),
 			),
@@ -56,7 +56,7 @@ func Load() (*Config, error) {
 		},
 		Redis: RedisConfig{
 			Addr:     fmt.Sprintf("%s:%s", getEnv("REDIS_HOST", "localhost"), getEnv("REDIS_PORT", "6379")),
-			Password: getEnv("REDIS_PASSWORD", "redis_pass_dev"),
+			Password: getEnv("REDIS_PASSWORD", ""),
 			DB:       getEnvInt("REDIS_DB", 1), // DB 1 for subscription service
 		},
 		OTEL: OTELConfig{

@@ -8,7 +8,10 @@ const GW_URL   = __ENV.GW_URL   || 'http://localhost:8090'
 let _token      = null
 let _tokenExpiry = 0
 
-export function getToken(email = 'load@example.com', password = 'P@ssword123!') {
+export function getToken(
+  email = __ENV.TEST_USER_EMAIL || 'codex-dev@apim.local',
+  password = __ENV.TEST_USER_PASSWORD || 'P@ssword123!',
+) {
   const now = Date.now()
   if (_token && now < _tokenExpiry) return _token
 

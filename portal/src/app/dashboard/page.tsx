@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
 
 export const metadata: Metadata = { title: '控制台總覽' }
+export const dynamic = 'force-dynamic'
 
 async function getSubscriptions(token: string) {
   try {
@@ -79,14 +80,15 @@ export default async function DashboardPage() {
         ) : (
           <div className="divide-y divide-gray-100">
             {subscriptions.slice(0, 5).map((sub: {
-              id: string; appName: string; status: string
-              plan: { name: string; api: { name: string; basePath: string } }
+              id: string; status: string
+              plan: { name: string } | null
+              api: { name: string; basePath: string } | null
             }) => (
               <div key={sub.id} className="flex items-center justify-between px-5 py-4 hover:bg-gray-50 transition-colors">
                 <div>
-                  <p className="font-medium text-sm text-gray-900">{sub.appName}</p>
+                  <p className="font-medium text-sm text-gray-900">{sub.api?.name ?? 'API 訂閱'}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    {sub.plan?.api?.name} · {sub.plan?.name}
+                    {sub.api?.basePath} · {sub.plan?.name}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">

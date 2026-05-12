@@ -87,9 +87,9 @@ type Token struct {
 type TokenType string
 
 const (
-	TokenTypeAccess    TokenType = "access_token"
-	TokenTypeRefresh   TokenType = "refresh_token"
-	TokenTypeIDToken   TokenType = "id_token"
+	TokenTypeAccess  TokenType = "access_token"
+	TokenTypeRefresh TokenType = "refresh_token"
+	TokenTypeIDToken TokenType = "id_token"
 )
 
 func (t *Token) IsExpired() bool {
@@ -150,6 +150,9 @@ type User struct {
 	DisplayName  string
 	PasswordHash string
 	Active       bool
+	OrgID        *uuid.UUID
+	OrgName      string
+	Role         string
 }
 
 // ─── Grant Types ─────────────────────────────────────────────

@@ -1,12 +1,13 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
-import { getRscClient } from '@/lib/apollo/client'
+import { getAuthClient, getRscClient } from '@/lib/apollo/client'
 import { GET_PUBLIC_APIS } from '@/lib/graphql/queries'
+import { getSession } from '@/lib/auth'
 import APICard from '@/components/api/APICard'
 import APIListFilters from '@/components/api/APIListFilters'
 
 export const metadata: Metadata = { title: 'API 目錄' }
-export const revalidate = 30
+export const dynamic = 'force-dynamic'
 
 interface SearchParams {
   q?:      string
@@ -15,11 +16,12 @@ interface SearchParams {
   page?:   string
 }
 
-async function getAPIs(params: SearchParams) {
+async function getAPIs(params: SearchParams, token?: string) {
   const page  = Number(params.page ?? 1)
   const limit = 12
   try {
-    const { data } = await getRscClient().query({
+    const client = token ? getAuthClient(token) : getRscClient()
+    const { data } = await client.query({
       query:     GET_PUBLIC_APIS,
       variables: {
         limit, page,
@@ -41,7 +43,8 @@ export default async function APIsPage({
 }: {
   searchParams: SearchParams
 }) {
-  const { nodes: apis, pageInfo } = await getAPIs(searchParams)
+  const session = await getSession()
+  const { nodes: apis, pageInfo } = await getAPIs(searchParams, session?.token)
   const currentPage = pageInfo.page ?? 1
 
   return (

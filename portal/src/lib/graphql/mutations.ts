@@ -1,28 +1,11 @@
 import { gql } from '@apollo/client'
 
-export const LOGIN = gql`
-  mutation Login($email: String!, $password: String!) {
-    login(email: $email, password: $password) {
-      token expiresAt
-      user { id email name role organizations { id name } }
-    }
-  }
-`
-
-export const REGISTER = gql`
-  mutation Register($input: RegisterInput!) {
-    register(input: $input) {
-      token expiresAt
-      user { id email name role }
-    }
-  }
-`
-
 export const CREATE_SUBSCRIPTION = gql`
-  mutation CreateSubscription($planId: ID!, $appName: String!) {
-    createSubscription(planId: $planId, appName: $appName) {
-      id status appName
-      plan { id name api { id name } }
+  mutation CreateSubscription($input: CreateSubscriptionInput!) {
+    createSubscription(input: $input) {
+      id status
+      plan { id name }
+      api { id name }
     }
   }
 `
@@ -34,9 +17,9 @@ export const CANCEL_SUBSCRIPTION = gql`
 `
 
 export const CREATE_API_KEY = gql`
-  mutation CreateAPIKey($subscriptionId: ID!, $name: String!) {
-    createAPIKey(subscriptionId: $subscriptionId, name: $name) {
-      id name keyPrefix
+  mutation CreateAPIKey($input: CreateAPIKeyInput!) {
+    createAPIKey(input: $input) {
+      id name keyPrefix subscriptionId
       plainKey   # returned only on creation
       status createdAt
     }
@@ -44,15 +27,7 @@ export const CREATE_API_KEY = gql`
 `
 
 export const REVOKE_API_KEY = gql`
-  mutation RevokeAPIKey($id: ID!) {
-    revokeAPIKey(id: $id) { id status }
-  }
-`
-
-export const ROTATE_API_KEY = gql`
-  mutation RotateAPIKey($id: ID!) {
-    rotateAPIKey(id: $id) {
-      id name keyPrefix plainKey status createdAt
-    }
+  mutation RevokeAPIKey($subscriptionId: ID!, $id: ID!) {
+    revokeAPIKey(subscriptionId: $subscriptionId, id: $id)
   }
 `

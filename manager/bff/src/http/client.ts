@@ -79,8 +79,8 @@ export class ServiceClient {
     const raw = await response.body.text()
     const { statusCode } = response
 
-    if (statusCode >= 500) {
-      this.log.warn({ statusCode, path: opts.path, body: raw }, 'upstream 5xx')
+    if (statusCode >= 400) {
+      this.log.warn({ statusCode, path: opts.path, body: raw }, 'upstream error response')
       throw new Error(`upstream error ${statusCode}: ${opts.path}`)
     }
 

@@ -9,7 +9,7 @@ import { checkGateway, checkStatus, errorRate } from '../libs/checks.js'
 import { authHeaders, apiKeyHeaders, GW_URL } from '../libs/auth.js'
 
 const API_KEY   = __ENV.TEST_API_KEY || ''
-const TEST_PATH = __ENV.TEST_PATH    || '/petstore/v1/pets'
+const TEST_PATH = __ENV.TEST_PATH    || '/dev/echo/v1/anything'
 const REGISTRY  = __ENV.REGISTRY_URL || 'http://localhost:8082'
 
 export const options = {

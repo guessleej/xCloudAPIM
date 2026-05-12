@@ -48,7 +48,7 @@ export async function setSessionCookie(jwt: string): Promise<void> {
   const jar = await cookies()
   jar.set(COOKIE_NAME, jwt, {
     httpOnly: true,
-    secure:   process.env.NODE_ENV === 'production',
+    secure:   process.env.SESSION_COOKIE_SECURE === 'true',
     sameSite: 'lax',
     maxAge:   COOKIE_MAX_S,
     path:     '/',

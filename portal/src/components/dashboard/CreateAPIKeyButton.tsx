@@ -65,7 +65,7 @@ export default function CreateAPIKeyButton({ subscriptionId, primary }: Props) {
                 fullWidth
                 loading={loading}
                 disabled={!name.trim()}
-                onClick={() => createKey({ variables: { subscriptionId, name: name.trim() } })}
+                onClick={() => createKey({ variables: { input: { subscriptionId, name: name.trim() } } })}
               >
                 建立
               </Button>

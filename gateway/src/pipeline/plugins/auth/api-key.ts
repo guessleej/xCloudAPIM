@@ -12,6 +12,7 @@ import { fetch } from 'undici'
 import type { ExecContext, PluginDeps } from '../../types.js'
 import { applyIdentity } from './claims.js'
 import { config as appConfig } from '../../../config/index.js'
+import { internalHeaders } from '../../../plugins/internal-token.js'
 
 const KEY_PREFIX = 'xca_'
 
@@ -63,7 +64,7 @@ export async function apiKeyAuth(
   try {
     const resp = await fetch(`${appConfig.SUBSCRIPTION_SERVICE_URL}/internal/keys/verify`, {
       method:  'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...internalHeaders() },
       body:    JSON.stringify({ key: rawKey }),
       signal:  AbortSignal.timeout(3000),
     })

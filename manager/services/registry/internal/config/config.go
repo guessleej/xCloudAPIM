@@ -54,7 +54,7 @@ func Load() (*Config, error) {
 				getEnv("POSTGRES_HOST", "localhost"),
 				getEnv("POSTGRES_PORT", "5432"),
 				getEnv("POSTGRES_USER", "apim_user"),
-				getEnv("POSTGRES_PASSWORD", "apim_pass_dev"),
+				getEnv("POSTGRES_PASSWORD", ""),
 				getEnv("POSTGRES_DB", "apim"),
 				getEnv("POSTGRES_SSL_MODE", "disable"),
 			),

@@ -5,8 +5,8 @@
 # ═══════════════════════════════════════════════════════════════
 set -euo pipefail
 
-VAULT_ADDR="${VAULT_ADDR:-http://localhost:8200}"
-VAULT_TOKEN="${VAULT_TOKEN:-dev-root-token}"
+: "${VAULT_ADDR:=http://localhost:8200}"
+: "${VAULT_TOKEN:?VAULT_TOKEN is required}"
 export VAULT_ADDR VAULT_TOKEN
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[0;33m'; CYAN='\033[0;36m'; RESET='\033[0m'
@@ -160,14 +160,14 @@ setup_db_creds() {
     port="${POSTGRES_PORT:-5432}" \
     database="${POSTGRES_DB:-apim}" \
     username="${POSTGRES_USER:-apim_user}" \
-    password="${POSTGRES_PASSWORD:-apim_pass_dev}" \
+    password="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}" \
     ssl_mode="disable"
   ok "PostgreSQL credentials → secret/database/postgres"
 
   vault kv put secret/database/redis \
     host="${REDIS_HOST:-redis-master-1}" \
     port="${REDIS_PORT:-6379}" \
-    password="${REDIS_PASSWORD:-redis_pass_dev}"
+    password="${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
   ok "Redis credentials → secret/database/redis"
 
   vault kv put secret/database/mongodb \
@@ -175,7 +175,7 @@ setup_db_creds() {
     port="${MONGO_PORT:-27017}" \
     database="${MONGO_DB:-apim_analytics}" \
     username="${MONGO_USER:-apim_user}" \
-    password="${MONGO_PASSWORD:-mongo_pass_dev}"
+    password="${MONGO_PASSWORD:?MONGO_PASSWORD is required}"
   ok "MongoDB credentials → secret/database/mongodb"
 }
 

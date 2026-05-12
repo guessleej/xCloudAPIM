@@ -9,19 +9,19 @@ import Button from '@/components/ui/Button'
 interface Plan {
   id:    string
   name:  string
-  isFree: boolean
   price?: number
 }
 
 interface Props {
   plan:          Plan
+  apiId:         string
+  orgId:         string
   isLoggedIn:    boolean
   alreadySubbed: boolean
 }
 
-export default function SubscribeButton({ plan, isLoggedIn, alreadySubbed }: Props) {
+export default function SubscribeButton({ plan, apiId, orgId, isLoggedIn, alreadySubbed }: Props) {
   const router = useRouter()
-  const [appName, setAppName] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [done, setDone] = useState(alreadySubbed)
 
@@ -57,22 +57,15 @@ export default function SubscribeButton({ plan, isLoggedIn, alreadySubbed }: Pro
         </Button>
       ) : (
         <div className="mt-3 p-3 bg-blue-50 rounded-xl border border-blue-200 space-y-2">
-          <p className="text-xs font-medium text-blue-800">應用程式名稱（方便識別）</p>
-          <input
-            type="text"
-            value={appName}
-            onChange={(e) => setAppName(e.target.value)}
-            placeholder="例：My App, Production Service"
-            className="w-full px-3 py-1.5 text-sm rounded-lg border border-blue-200 focus:outline-none focus:ring-2 focus:ring-brand-500"
-          />
+          <p className="text-xs font-medium text-blue-800">確認建立這個 API 的訂閱</p>
           {error && <p className="text-xs text-red-600">{error.message}</p>}
           <div className="flex gap-2">
             <Button
               size="xs"
               variant="primary"
               loading={loading}
-              disabled={!appName.trim()}
-              onClick={() => createSubscription({ variables: { planId: plan.id, appName: appName.trim() } })}
+              disabled={!orgId}
+              onClick={() => createSubscription({ variables: { input: { orgId, apiId, planId: plan.id } } })}
             >
               確認訂閱
             </Button>

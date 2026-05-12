@@ -26,14 +26,21 @@ export interface APIListResponse {
   limit: number
 }
 
+interface RegistryAPIListResponse {
+  items:      APIDTO[]
+  total:      number
+  page:       number
+  page_size:  number
+}
+
 export class RegistryAPI {
   private client: ServiceClient
 
-  constructor(log: Logger, authHeader?: string) {
+  constructor(log: Logger, extraHeaders?: Record<string, string>) {
     this.client = new ServiceClient(
       config.REGISTRY_SERVICE_URL,
       log,
-      authHeader ? { authorization: authHeader } : {},
+      extraHeaders,
     )
   }
 
@@ -47,13 +54,19 @@ export class RegistryAPI {
     if (params.orgId)  qs.set('org_id', params.orgId)
     if (params.status) qs.set('status', params.status)
     if (params.page)   qs.set('page', String(params.page))
-    if (params.limit)  qs.set('limit', String(params.limit))
-    return this.client.get<APIListResponse>(`/v1/apis?${qs}`)
+    if (params.limit)  qs.set('page_size', String(params.limit))
+    const data = await this.client.get<RegistryAPIListResponse>(`/apis?${qs}`)
+    return {
+      data:  data.items,
+      total: data.total,
+      page:  data.page,
+      limit: data.page_size,
+    }
   }
 
   async getAPI(id: string): Promise<APIDTO | null> {
     try {
-      return await this.client.get<APIDTO>(`/v1/apis/${id}`)
+      return await this.client.get<APIDTO>(`/apis/${id}`)
     } catch {
       return null
     }
@@ -61,8 +74,8 @@ export class RegistryAPI {
 
   async getAPIsByIds(ids: string[]): Promise<APIDTO[]> {
     if (!ids.length) return []
-    const qs = new URLSearchParams({ ids: ids.join(',') })
-    return this.client.get<APIDTO[]>(`/v1/apis/batch?${qs}`)
+    const results = await Promise.all(ids.map(async (id) => this.getAPI(id)))
+    return results.filter((api): api is APIDTO => api !== null)
   }
 
   async createAPI(input: {
@@ -77,14 +90,14 @@ export class RegistryAPI {
     retries?:       number
     strip_base_path?: boolean
   }): Promise<APIDTO> {
-    return this.client.post<APIDTO>('/v1/apis', input)
+    return this.client.post<APIDTO>('/apis', input)
   }
 
   async updateAPI(id: string, input: Partial<APIDTO>): Promise<APIDTO> {
-    return this.client.put<APIDTO>(`/v1/apis/${id}`, input)
+    return this.client.put<APIDTO>(`/apis/${id}`, input)
   }
 
   async deleteAPI(id: string): Promise<void> {
-    await this.client.delete(`/v1/apis/${id}`)
+    await this.client.delete(`/apis/${id}`)
   }
 }

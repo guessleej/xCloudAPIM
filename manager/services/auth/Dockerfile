@@ -1,11 +1,11 @@
 # ═══════════════════════════════════════════════════════════════
 #  Auth Service Dockerfile — Multi-Stage Build
-#  Stage 1: Build (golang:1.22-alpine)
+#  Stage 1: Build (golang:1.25-alpine)
 #  Stage 2: Runtime (alpine:3.19)
 # ═══════════════════════════════════════════════════════════════
 
 # ─── Stage 1: Builder ─────────────────────────────────────────
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # 安裝 build 依賴
 RUN apk add --no-cache git ca-certificates tzdata

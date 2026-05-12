@@ -66,8 +66,8 @@ func (s *AuthService) Authorize(ctx context.Context, req *domain.AuthorizeReques
 		if req.CodeChallengeMethod == "" {
 			req.CodeChallengeMethod = "S256"
 		}
-		if req.CodeChallengeMethod != "S256" && req.CodeChallengeMethod != "plain" {
-			return "", domain.ErrInvalidRequest("code_challenge_method must be S256 or plain")
+		if req.CodeChallengeMethod != "S256" {
+			return "", domain.ErrInvalidRequest("code_challenge_method must be S256")
 		}
 	}
 

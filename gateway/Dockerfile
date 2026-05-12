@@ -1,5 +1,5 @@
 # ─── Build Stage ──────────────────────────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS builder
+FROM node:20.19-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN npm run build
 RUN npm ci --omit=dev --ignore-scripts
 
 # ─── Runtime Stage ────────────────────────────────────────────────────────────
-FROM node:20.14.0-alpine3.19 AS runtime
+FROM node:20.19-alpine AS runtime
 
 # 安裝 dumb-init（PID 1 信號轉發）+ curl（健康檢查備援）
 RUN apk add --no-cache dumb-init=1.2.5-r3 curl && \

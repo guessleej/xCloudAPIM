@@ -8,6 +8,7 @@
     "build":     "tsc -p tsconfig.json",
     "start":     "node --enable-source-maps dist/app.js",
     "dev":       "tsx watch src/app.ts",
+    "test":      "tsx --test \"src/**/*.test.ts\"",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

@@ -1,0 +1,140 @@
+# ═══════════════════════════════════════════════════════════════
+#  xCloudAPIM — docker-compose.prod.yml（生產環境 overlay）
+#  用法：docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ═══════════════════════════════════════════════════════════════
+name: xcloudapim
+
+services:
+
+  # ── 關閉開發工具對外 port ──────────────────────────────────────
+
+  pgadmin:
+    ports: []
+    environment:
+      PGADMIN_LISTEN_ADDRESS: 127.0.0.1
+
+  mongo-express:
+    ports: []
+
+  kafka-ui:
+    ports: []
+
+  mailhog:
+    ports: []
+
+  influxdb-k6:
+    profiles:
+      - loadtest
+
+  # ── Gateway：僅透過 Nginx 對外 ─────────────────────────────────
+
+  gateway:
+    ports: []
+    environment:
+      NODE_ENV: production
+
+  bff:
+    ports: []
+    environment:
+      NODE_ENV: production
+
+  # ── 管理 Studio / Portal：僅內網 ──────────────────────────────
+
+  studio:
+    ports: []
+
+  portal:
+    ports: []
+
+  # ── 應用服務：加強資源限制 ────────────────────────────────────
+
+  auth-service:
+    environment:
+      APP_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+
+  registry-service:
+    environment:
+      APP_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  subscription-service:
+    environment:
+      APP_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+
+  policy-engine:
+    environment:
+      APP_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  analytics-service:
+    environment:
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+
+  notification-service:
+    environment:
+      NODE_ENV: production
+
+  # ── Observability：限制 Prometheus / Grafana 對外 port ─────────
+
+  prometheus:
+    ports:
+      - "127.0.0.1:19090:9090"
+
+  grafana:
+    ports:
+      - "127.0.0.1:3002:3000"
+
+  jaeger:
+    ports:
+      - "127.0.0.1:16686:16686"
+      - "127.0.0.1:4317:4317"
+      - "127.0.0.1:4318:4318"
+
+  alertmanager:
+    ports:
+      - "127.0.0.1:9093:9093"
+
+  # ── Kafka Retention：生產環境保留更長 ────────────────────────
+
+  kafka:
+    environment:
+      KAFKA_LOG_RETENTION_HOURS: 168
+      KAFKA_LOG_RETENTION_BYTES: 10737418240

@@ -11,7 +11,7 @@ import { GW_URL, AUTH_URL } from '../libs/auth.js'
 const REGISTRY_URL     = __ENV.REGISTRY_URL     || 'http://localhost:8082'
 const SUBSCRIPTION_URL = __ENV.SUBSCRIPTION_URL || 'http://localhost:8084'
 const BFF_URL          = __ENV.BFF_URL          || 'http://localhost:4000'
-const TEST_PATH        = __ENV.TEST_PATH        || '/petstore/v1/pets'
+const TEST_PATH        = __ENV.TEST_PATH        || '/dev/echo/v1/anything'
 
 export const options = {
   scenarios: {

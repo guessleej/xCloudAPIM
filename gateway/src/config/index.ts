@@ -26,6 +26,8 @@ const schema = z.object({
 
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4318'),
   OTEL_SERVICE_NAME:           z.string().default('api-gateway'),
+
+  INTERNAL_SERVICE_SECRET:     z.string().min(1).default(''),
 })
 
 const parsed = schema.safeParse(process.env)

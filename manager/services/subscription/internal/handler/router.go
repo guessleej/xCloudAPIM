@@ -8,6 +8,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/redis/go-redis/v9"
+	"github.com/xcloudapim/subscription-service/internal/middleware"
 	"go.uber.org/zap"
 )
 
@@ -75,11 +76,11 @@ func NewRouter(
 	subs.GET("/:id/quota",    quotaH.GetQuota)
 	subs.GET("/:id/usage",    quotaH.GetUsageHistory)
 
-	// ─── Internal（Gateway 呼叫） ─────────────────────────────
-	internal := r.Group("/internal")
-	internal.POST("/keys/verify",        keyH.Verify)
-	internal.POST("/usage/increment",     quotaH.Increment)
-	internal.GET("/quota/check",          quotaH.Check)
+	// ─── Internal（Gateway 呼叫，需 X-Internal-Token）────────
+	internal := r.Group("/internal", middleware.InternalAuth())
+	internal.POST("/keys/verify",     keyH.Verify)
+	internal.POST("/usage/increment",  quotaH.Increment)
+	internal.GET("/quota/check",       quotaH.Check)
 
 	return r
 }

@@ -6,6 +6,9 @@ vendor/
 dist/
 build/
 out/
+.next/
+*.tsbuildinfo
+.cache/
 *.o
 *.exe
 
@@ -36,3 +39,17 @@ data/
 
 # Claude worktrees
 .claude/worktrees/
+
+# Compiled Go binaries
+manager/services/auth/server
+manager/services/registry/server
+manager/services/subscription/server
+policy-engine/server
+
+# SSL certificates and private keys (auto-generated)
+infra/nginx/certs/
+infra/nginx/auth/.htpasswd
+
+# Local tool version files
+.tool-versions
+mise.toml

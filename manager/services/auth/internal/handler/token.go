@@ -113,7 +113,7 @@ func (h *Handlers) OpenIDConfig(c *gin.Context) {
 		"id_token_signing_alg_values_supported": []string{"RS256"},
 		"scopes_supported":                      []string{"openid", "profile", "email", "api:read", "api:write", "offline_access"},
 		"token_endpoint_auth_methods_supported": []string{"client_secret_basic", "client_secret_post", "none"},
-		"code_challenge_methods_supported":      []string{"S256", "plain"},
+		"code_challenge_methods_supported":      []string{"S256"},
 		"claims_supported":                      []string{"sub", "iss", "aud", "exp", "iat", "jti", "client_id", "scopes", "plan"},
 	})
 }
