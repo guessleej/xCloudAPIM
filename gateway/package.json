@@ -16,10 +16,10 @@
     "@fastify/helmet": "^13.0.0",
     "@fastify/reply-from": "^12.6.2",
     "@fastify/under-pressure": "^9.0.0",
-    "@opentelemetry/api": "^1.8.0",
-    "@opentelemetry/auto-instrumentations-node": "^0.46.1",
-    "@opentelemetry/exporter-trace-otlp-http": "^0.51.1",
-    "@opentelemetry/sdk-node": "^0.51.1",
+    "@opentelemetry/api": "^1.9.1",
+    "@opentelemetry/auto-instrumentations-node": "^0.76.0",
+    "@opentelemetry/exporter-trace-otlp-http": "^0.218.0",
+    "@opentelemetry/sdk-node": "^0.218.0",
     "fastify": "^5.8.5",
     "ioredis": "^5.3.2",
     "jose": "^5.3.0",
@@ -32,7 +32,7 @@
   "devDependencies": {
     "@types/node": "^20.12.0",
     "@types/uuid": "^9.0.8",
-    "tsx": "^4.10.5",
+    "tsx": "^4.22.2",
     "typescript": "^5.4.5"
   },
   "engines": {
