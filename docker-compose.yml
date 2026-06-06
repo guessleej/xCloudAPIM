@@ -485,7 +485,9 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-apim_user}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:?MONGO_PASSWORD is required}
-      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/
+      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/?tls=true&tlsInsecure=true
+      ME_CONFIG_MONGODB_TLS:           "true"
+      ME_CONFIG_MONGODB_TLSALLOWINVALIDCERTIFICATES: "true"
       ME_CONFIG_BASICAUTH:             true
       ME_CONFIG_BASICAUTH_USERNAME:    ${MGMT_ADMIN_USER:-admin}
       ME_CONFIG_BASICAUTH_PASSWORD:    ${MGMT_ADMIN_PASSWORD:?MGMT_ADMIN_PASSWORD is required}
@@ -682,7 +684,7 @@ services:
       KAFKA_BROKERS:       kafka:9092
       KAFKA_GROUP_ID:      analytics-service
       KAFKA_CLIENT_ID:     analytics-service
-      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin
+      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin&tls=true&tlsInsecure=true
       MONGO_DB:            ${MONGO_DB:-apim_analytics}
       REDIS_HOST:          redis-master-1
       REDIS_PORT:          6379
@@ -734,7 +736,7 @@ services:
       KAFKA_BROKERS:         kafka:9092
       KAFKA_GROUP_ID:        notification-service
       KAFKA_CLIENT_ID:       notification-service
-      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/apim_notifications?authSource=admin
+      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/apim_notifications?authSource=admin&tls=true&tlsInsecure=true
       MONGO_DB:              apim_notifications
       REDIS_HOST:            redis-master-1
       REDIS_PORT:            6379
@@ -1083,7 +1085,7 @@ services:
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-      MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin
+      MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin&tls=true&tlsInsecure=true
       ES_ADDRESSES:       https://elasticsearch:9200
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
