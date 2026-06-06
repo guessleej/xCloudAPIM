@@ -98,6 +98,26 @@ vault kv put secret/database \
   redis_password="${REDIS_PASSWORD:?REDIS_PASSWORD is required}"
 echo "✅ Database credentials stored at secret/database"
 
+# ─── Database Secrets Engine（動態簽發 postgres 帳密，P2-B-2）──────
+echo "▶ Configuring database secrets engine..."
+vault secrets enable -path=database database 2>/dev/null || echo "  (database engine already enabled)"
+# Vault 以 apim_user（postgres image 預設為 superuser，可 CREATE ROLE）連線管理動態帳號
+# postgres 已啟用 TLS（P2-A）→ 連線需 sslmode=require
+vault write database/config/apim-postgres \
+  plugin_name=postgresql-database-plugin \
+  allowed_roles="apim-dyn" \
+  connection_url="postgresql://{{username}}:{{password}}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB:-apim}?sslmode=require" \
+  username="${POSTGRES_USER:-apim_user}" \
+  password="${POSTGRES_PASSWORD}" >/dev/null
+# 角色：建立臨時 LOGIN 角色並授予 public schema 權限；default 24h、max 168h
+vault write database/roles/apim-dyn \
+  db_name=apim-postgres \
+  creation_statements="CREATE ROLE \"{{name}}\" WITH LOGIN PASSWORD '{{password}}' VALID UNTIL '{{expiration}}'; GRANT USAGE ON SCHEMA public TO \"{{name}}\"; GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO \"{{name}}\"; GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO \"{{name}}\";" \
+  revocation_statements="REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\"; REVOKE ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public FROM \"{{name}}\"; REVOKE USAGE ON SCHEMA public FROM \"{{name}}\"; DROP ROLE IF EXISTS \"{{name}}\";" \
+  default_ttl="24h" \
+  max_ttl="168h" >/dev/null
+echo "✅ Database secrets engine ready (role: apim-dyn)"
+
 # ─── Internal Service Secret ──────────────────────────────────
 if [[ -n "${INTERNAL_SERVICE_SECRET:-}" ]]; then
   vault kv put secret/internal \
@@ -116,6 +136,12 @@ path "secret/data/database" {
 }
 path "secret/data/internal" {
   capabilities = ["read"]
+}
+path "database/creds/apim-dyn" {
+  capabilities = ["read"]
+}
+path "sys/leases/renew" {
+  capabilities = ["update"]
 }
 POLICY
 echo "✅ Policy 'apim-service' created"
