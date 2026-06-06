@@ -11,10 +11,14 @@ INIT_FILE="/vault/data/.init_keys"
 
 export VAULT_ADDR
 
+# 注意：vault status 對「未初始化/封印」回傳 exit code 2；在 `set -o pipefail`
+# 下，`vault status | grep` 會因此被視為失敗。故一律先以 `|| true` 擷取輸出，
+# 再對輸出做判斷，避免 pipefail 造成永遠等待。
 wait_vault() {
-  local max=30
+  local max=30 out
   for i in $(seq 1 $max); do
-    if vault status -format=json 2>/dev/null | grep -q '"initialized"'; then
+    out=$(vault status -format=json 2>/dev/null || true)
+    if printf '%s' "$out" | grep -q '"initialized"'; then
       return 0
     fi
     echo "⏳ Waiting for Vault... ($i/$max)"
@@ -26,7 +30,8 @@ wait_vault() {
 
 wait_vault
 
-IS_INITIALIZED=$(vault status -format=json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['initialized'])" 2>/dev/null || echo "false")
+STATUS_JSON=$(vault status -format=json 2>/dev/null || true)
+IS_INITIALIZED=$(printf '%s' "$STATUS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['initialized'])" 2>/dev/null || echo "false")
 
 if [[ "$IS_INITIALIZED" == "False" || "$IS_INITIALIZED" == "false" ]]; then
   echo "▶ Initializing Vault (5 shares, 3 threshold)..."
@@ -48,7 +53,8 @@ if [[ "$IS_INITIALIZED" == "False" || "$IS_INITIALIZED" == "false" ]]; then
   echo "✅ Vault unsealed with root token"
 else
   echo "▶ Vault already initialized"
-  IS_SEALED=$(vault status -format=json 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin)['sealed'])" 2>/dev/null || echo "true")
+  SEAL_JSON=$(vault status -format=json 2>/dev/null || true)
+  IS_SEALED=$(printf '%s' "$SEAL_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['sealed'])" 2>/dev/null || echo "true")
   if [[ "$IS_SEALED" == "True" || "$IS_SEALED" == "true" ]]; then
     echo "⚠️  Vault is sealed — automatic unseal is disabled in production mode"
     echo "    Run: vault operator unseal <key1> && vault operator unseal <key2> && vault operator unseal <key3>"
