@@ -126,7 +126,7 @@ USER 10001:10001                 # non-root
 | **P1** ✅ | 容器強化（non-root / read-only / cap-drop）、統一錯誤回應、SSRF allow-list、GraphQL complexity | 中 |
 | **P2-A** ✅ | **生產 TLS（資料層全部）：Postgres / Redis(含 cluster bus) / MongoDB / Kafka(SASL_SSL) / Elasticsearch** | 中高（已逐服務驗證上線） |
 | **P2-B-1** ✅ | **網路多網段分區（edge/app/svc/data，svc+data internal，全參數化可依環境設定）** | 高（已一次性重建驗證；data 層隔離已實證） |
-| **P2-B-2** ⬜ | Vault 動態憑證（DB secrets engine） | 中高 |
+| **P2-B-2** ✅ | **Vault 動態憑證（DB secrets engine 動態簽發 postgres 帳密；4 服務背景續租/輪轉）** | 中高（已上線驗證；fallback 開關 VAULT_DB_CREDS） |
 | **P3** ⬜ | 服務間 mTLS、不可變稽核日誌、自動金鑰輪轉 | 高 |
 
 > 本次（P0）聚焦「不改變執行架構」的安全內建；P1–P3 以 issue 追蹤、分批驗證上線，避免破壞既有運行系統。

@@ -348,6 +348,22 @@ done
   （JWT 金鑰重生 = token 重置）。
 - 驗證隔離：`docker exec apim-nginx sh -c "nc -z postgres 5432"` 應**連不到**（資料層已隔離）。
 
+## 8.6 Vault 動態 DB 憑證（P2-B-2）
+
+postgres client（auth/registry/subscription/policy-engine）可改用 Vault **動態簽發**
+的臨時帳密（取代靜態 POSTGRES_PASSWORD）：
+
+- vault-prod-init.sh 已自動設定 DB secrets engine + 角色 `apim-dyn`
+  （default TTL 24h、max 168h；Vault 以 apim_user/superuser 連 postgres 建臨時角色）。
+- 以 `.env` 全域開關啟用：`VAULT_DB_CREDS=true`（預設 false → 沿用靜態，可隨時回滾）。
+- 各服務啟動時向 `database/creds/apim-dyn` 取帳密；背景 renew lease，接近 max_ttl
+  或 renew 失敗則重新簽發並 swap connector（單一 *sql.DB 物件不變）。
+- 驗證：`docker exec apim-postgres psql -U apim_user -d apim -c "SELECT usename,client_addr
+  FROM pg_stat_activity WHERE datname='apim' AND client_addr IS NOT NULL;"`
+  → 服務應以 `v-root-apim-dyn-…` 動態帳號連線（apim_user 僅剩 Vault 引擎管理連線 + exporter）。
+- 限制：跨 max_ttl(168h) 不重啟的零停機輪轉需 connector 已支援；exporter 仍用靜態帳密。
+- 手動驗證可簽發：`docker exec -e VAULT_TOKEN=<root> apim-vault vault read database/creds/apim-dyn`。
+
 ## 9. 疑難排解（首次部署常見坑）
 
 | 症狀 | 原因 | 解法 |
