@@ -445,6 +445,15 @@ services:
     image: mongo:7
     <<: *always-restart
     container_name: apim-mongodb
+    # P2-A：啟用 TLS。allowTLS 同時接受明文與加密連線（client 以 tls=true 決定），
+    # mongo.pem 為 cert+key 合併檔，須可被 mongodb 使用者(uid 999) 讀取。
+    command:
+      - mongod
+      - --tlsMode
+      - allowTLS
+      - --tlsCertificateKeyFile
+      - /etc/mongo-certs/mongo.pem
+      - --tlsAllowConnectionsWithoutCertificates
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-apim_user}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?MONGO_PASSWORD is required}
@@ -452,10 +461,11 @@ services:
     volumes:
       - mongodb-data:/data/db
       - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./infra/mongodb/certs:/etc/mongo-certs:ro
     ports:
       - "27017:27017"
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      test: ["CMD", "mongosh", "--quiet", "--tls", "--tlsAllowInvalidCertificates", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
