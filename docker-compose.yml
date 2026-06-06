@@ -30,12 +30,34 @@ x-hardened-writable: &hardened-writable
   security_opt:
     - no-new-privileges:true
 
+# ─── P2-B 多網段分區（子網/internal 皆可由 .env 依環境設定）──────────
+#   edge-net : 對外邊界（nginx）
+#   app-net  : 應用 + 監控 UI（可對主機發佈埠）
+#   svc-net  : 內部服務（internal，不對外、不可從主機直連埠）
+#   data-net : 資料層（internal，僅授權服務可達；無對外 egress）
 networks:
-  apim-net:
+  edge-net:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.28.0.0/16
+        - subnet: ${EDGE_SUBNET:-172.28.10.0/24}
+  app-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: ${APP_SUBNET:-172.28.20.0/24}
+  svc-net:
+    driver: bridge
+    internal: ${SVC_NET_INTERNAL:-true}
+    ipam:
+      config:
+        - subnet: ${SVC_SUBNET:-172.28.30.0/24}
+  data-net:
+    driver: bridge
+    internal: ${DATA_NET_INTERNAL:-true}
+    ipam:
+      config:
+        - subnet: ${DATA_SUBNET:-172.28.40.0/24}
 
 volumes:
   postgres-data:
@@ -91,8 +113,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.10
+      - data-net
     logging: *default-logging
 
   pgadmin:
@@ -113,8 +134,8 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.11
+      - app-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -151,8 +172,8 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.20
+      data-net:
+        ipv4_address: ${REDIS_M1_IP:-172.28.40.21}
 
   redis-master-2:
     image: redis:7-alpine
@@ -185,8 +206,8 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.21
+      data-net:
+        ipv4_address: ${REDIS_M2_IP:-172.28.40.22}
 
   redis-master-3:
     image: redis:7-alpine
@@ -219,8 +240,8 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.22
+      data-net:
+        ipv4_address: ${REDIS_M3_IP:-172.28.40.23}
 
   redis-replica-1:
     image: redis:7-alpine
@@ -247,8 +268,8 @@ services:
     ports:
       - "6382:6379"
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.23
+      data-net:
+        ipv4_address: ${REDIS_R1_IP:-172.28.40.24}
 
   redis-replica-2:
     image: redis:7-alpine
@@ -275,8 +296,8 @@ services:
     ports:
       - "6383:6379"
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.24
+      data-net:
+        ipv4_address: ${REDIS_R2_IP:-172.28.40.25}
 
   redis-replica-3:
     image: redis:7-alpine
@@ -303,13 +324,13 @@ services:
     ports:
       - "6384:6379"
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.25
+      data-net:
+        ipv4_address: ${REDIS_R3_IP:-172.28.40.26}
 
   redis-cluster-init:
     image: redis:7-alpine
     container_name: apim-redis-cluster-init
-    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --tls --cacert /tls/redis.crt --cluster create 172.28.0.20:6379 172.28.0.21:6379 172.28.0.22:6379 172.28.0.23:6379 172.28.0.24:6379 172.28.0.25:6379 --cluster-replicas 1 --cluster-yes"
+    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --tls --cacert /tls/redis.crt --cluster create ${REDIS_M1_IP:-172.28.40.21}:6379 ${REDIS_M2_IP:-172.28.40.22}:6379 ${REDIS_M3_IP:-172.28.40.23}:6379 ${REDIS_R1_IP:-172.28.40.24}:6379 ${REDIS_R2_IP:-172.28.40.25}:6379 ${REDIS_R3_IP:-172.28.40.26}:6379 --cluster-replicas 1 --cluster-yes"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
@@ -322,7 +343,7 @@ services:
       redis-master-3:
         condition: service_healthy
     networks:
-      apim-net:
+      - data-net
 
   # ─────────────────────────────────────────────────────────────
   # Apache Kafka 3.6 + Zookeeper + Kafka UI
@@ -346,8 +367,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.30
+      - data-net
     logging: *default-logging
 
   kafka:
@@ -404,8 +424,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.31
+      - data-net
     logging: *default-logging
 
   kafka-init:
@@ -428,7 +447,7 @@ services:
         kafka-topics --bootstrap-server kafka:9092 --list
       "
     networks:
-      apim-net:
+      - data-net
 
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
@@ -449,8 +468,8 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.32
+      - app-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -483,8 +502,7 @@ services:
       retries: 10
       start_period: 15s
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.40
+      - data-net
     logging: *default-logging
 
   vault-init:
@@ -508,7 +526,7 @@ services:
       vault:
         condition: service_healthy
     networks:
-      apim-net:
+      - data-net
 
   # ─────────────────────────────────────────────────────────────
   # MongoDB 7 + Mongo Express
@@ -546,8 +564,7 @@ services:
       retries: 5
       start_period: 20s
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.50
+      - data-net
     logging: *default-logging
 
   mongo-express:
@@ -570,8 +587,8 @@ services:
       mongodb:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.51
+      - app-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -613,8 +630,7 @@ services:
       retries: 10
       start_period: 60s
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.60
+      - data-net
     logging: *default-logging
 
   kibana:
@@ -637,8 +653,8 @@ services:
       elasticsearch:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.61
+      - app-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -659,7 +675,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      apim-net:
+      - data-net
 
   # ─────────────────────────────────────────────────────────────
   # Observability Stack
@@ -680,8 +696,9 @@ services:
     ports:
       - "19090:9090"
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.70
+      - app-net
+      - svc-net
+      - data-net
     logging: *default-logging
 
   grafana:
@@ -702,8 +719,7 @@ services:
     depends_on:
       - prometheus
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.71
+      - app-net
     logging: *default-logging
 
   jaeger:
@@ -719,8 +735,8 @@ services:
       - "4318:4318"     # OTLP HTTP
       - "14268:14268"   # Jaeger HTTP
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.72
+      - app-net
+      - svc-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -734,8 +750,8 @@ services:
       - "11025:1025"   # SMTP
       - "0.0.0.0:8025:8025"   # Web UI
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.80
+      - app-net
+      - svc-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -789,8 +805,8 @@ services:
           cpus: '0.5'
           memory: 512M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.92
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -850,8 +866,8 @@ services:
           cpus: '0.25'
           memory: 256M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.93
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -913,8 +929,8 @@ services:
           cpus: '0.1'
           memory: 128M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.91
+      - app-net
+      - svc-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -974,8 +990,9 @@ services:
           cpus: '0.25'
           memory: 256M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.90
+      - app-net
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1020,8 +1037,7 @@ services:
           cpus: '0.05'
           memory: 32M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.94
+      - app-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1069,8 +1085,8 @@ services:
           cpus: '0.1'
           memory: 128M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.95
+      - app-net
+      - svc-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1136,8 +1152,8 @@ services:
           cpus: '0.05'
           memory: 64M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.81
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1201,8 +1217,8 @@ services:
           cpus: '0.1'
           memory: 96M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.82
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1263,8 +1279,8 @@ services:
           cpus: '0.1'
           memory: 128M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.83
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1328,8 +1344,8 @@ services:
           cpus: '0.05'
           memory: 64M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.84
+      - svc-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1376,8 +1392,8 @@ services:
           cpus: '0.05'
           memory: 16M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.100
+      - edge-net
+      - app-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1393,8 +1409,8 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.110
+      - app-net
+      - data-net
     logging: *default-logging
 
   redis-exporter:
@@ -1409,8 +1425,8 @@ services:
       redis-master-1:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.111
+      - app-net
+      - data-net
     logging: *default-logging
 
   node-exporter:
@@ -1428,8 +1444,7 @@ services:
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.112
+      - app-net
     logging: *default-logging
 
   nginx-exporter:
@@ -1442,8 +1457,8 @@ services:
       nginx:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.113
+      - app-net
+      - edge-net
     logging: *default-logging
 
   kafka-exporter:
@@ -1457,8 +1472,8 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.116
+      - app-net
+      - data-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1482,8 +1497,7 @@ services:
       timeout: 5s
       retries: 3
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.114
+      - app-net
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
@@ -1518,6 +1532,5 @@ services:
           cpus: '0.1'
           memory: 128M
     networks:
-      apim-net:
-        ipv4_address: 172.28.0.115
+      - app-net
     logging: *default-logging
