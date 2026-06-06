@@ -525,7 +525,10 @@ services:
     depends_on:
       vault:
         condition: service_healthy
+    # app-net 提供對外 egress（runtime apk 安裝 openssl 用）；data-net 連 vault。
+    # data-net 為 internal 無 egress，故 init job 需多接 app-net。
     networks:
+      - app-net
       - data-net
 
   # ─────────────────────────────────────────────────────────────
