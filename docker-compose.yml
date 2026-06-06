@@ -877,8 +877,15 @@ services:
         GIT_COMMIT: ${GIT_COMMIT:-}
     image: xcloudapim/studio:${IMAGE_TAG:-latest}
     <<: [*always-restart, *hardened-writable]
+    # nginx(root master → worker uid 101) 所需最小 capabilities：
+    # CHOWN/DAC_OVERRIDE 用於快取目錄、SETUID/SETGID 用於降權至 worker、
+    # NET_BIND_SERVICE 用於綁定 80。其餘 capability 仍由 cap_drop:[ALL] 移除。
     cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
       - NET_BIND_SERVICE
+      - DAC_OVERRIDE
     container_name: apim-studio
     ports:
       - "0.0.0.0:5173:80"
