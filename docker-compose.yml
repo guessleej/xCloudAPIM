@@ -560,7 +560,7 @@ services:
     image: flyway/flyway:10-alpine
     container_name: apim-flyway
     command: >
-      -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-apim}
+      -url=jdbc:postgresql://postgres:5432/${POSTGRES_DB:-apim}?sslmode=require
       -user=${POSTGRES_USER:-apim_user}
       -password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       -connectRetries=10
@@ -1000,7 +1000,7 @@ services:
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
       POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
-      POSTGRES_SSL_MODE:  disable
+      POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -1066,7 +1066,7 @@ services:
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
       POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
-      POSTGRES_SSL_MODE:  disable
+      POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -1129,7 +1129,7 @@ services:
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
       POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
-      POSTGRES_SSL_MODE:  disable
+      POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -1190,7 +1190,7 @@ services:
       POSTGRES_USER:      ${POSTGRES_USER:-apim_user}
       POSTGRES_PASSWORD:  ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
-      POSTGRES_SSL_MODE:  disable
+      POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
@@ -1289,7 +1289,7 @@ services:
     <<: *always-restart
     container_name: apim-postgres-exporter
     environment:
-      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=disable
+      DATA_SOURCE_NAME: postgresql://${POSTGRES_USER:-apim_user}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}@postgres:5432/${POSTGRES_DB:-apim}?sslmode=require
     depends_on:
       postgres:
         condition: service_healthy
