@@ -373,11 +373,13 @@ services:
       # cp-kafka 映像在 SASL 啟用時要求 KAFKA_OPTS 非空（dub ensure）；實際 JAAS 由上方
       # listener-specific 設定提供，此處給無害佔位值以通過映像啟動檢查。
       KAFKA_OPTS: "-Dnop=true"
-      KAFKA_SSL_KEYSTORE_FILENAME: kafka.keystore.jks
-      KAFKA_SSL_KEYSTORE_CREDENTIALS: kafka_keystore_creds
-      KAFKA_SSL_KEY_CREDENTIALS: kafka_key_creds
-      KAFKA_SSL_TRUSTSTORE_FILENAME: kafka.truststore.jks
-      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: kafka_truststore_creds
+      # 直接指定 keystore/truststore 位置與密碼（FILENAME/CREDENTIALS 檔案模式
+      # 在此 image 未套用，導致 ssl.keystore.location=null → handshake_failure）。
+      KAFKA_SSL_KEYSTORE_LOCATION: /etc/kafka/secrets/kafka.keystore.jks
+      KAFKA_SSL_KEYSTORE_PASSWORD: ${KAFKA_SSL_PASSWORD:?KAFKA_SSL_PASSWORD is required}
+      KAFKA_SSL_KEY_PASSWORD: ${KAFKA_SSL_PASSWORD:?KAFKA_SSL_PASSWORD is required}
+      KAFKA_SSL_TRUSTSTORE_LOCATION: /etc/kafka/secrets/kafka.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_PASSWORD: ${KAFKA_SSL_PASSWORD:?KAFKA_SSL_PASSWORD is required}
       KAFKA_SSL_CLIENT_AUTH: none
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
