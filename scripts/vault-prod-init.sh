@@ -30,32 +30,39 @@ wait_vault() {
 
 wait_vault
 
-STATUS_JSON=$(vault status -format=json 2>/dev/null || true)
-IS_INITIALIZED=$(printf '%s' "$STATUS_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['initialized'])" 2>/dev/null || echo "false")
+# 以 grep/sed 解析 JSON（不依賴 python3，避免 runtime apk 失敗導致中斷）
+json_bool() { grep -oE "\"$1\"[[:space:]]*:[[:space:]]*(true|false)" | grep -oE "(true|false)" | head -1; }
 
-if [[ "$IS_INITIALIZED" == "False" || "$IS_INITIALIZED" == "false" ]]; then
+IS_INITIALIZED=$(vault status -format=json 2>/dev/null | json_bool initialized || true)
+[ -z "$IS_INITIALIZED" ] && IS_INITIALIZED=false
+
+if [ "$IS_INITIALIZED" = "false" ]; then
   echo "▶ Initializing Vault (5 shares, 3 threshold)..."
-  vault operator init \
-    -key-shares=5 \
-    -key-threshold=3 \
-    -format=json > "$INIT_FILE"
-  chmod 600 "$INIT_FILE"
+  # 寫入暫存檔再 mv：避免 init 失敗時 redirect 清空既有金鑰檔（曾導致 unseal key 遺失）
+  if vault operator init -key-shares=5 -key-threshold=3 -format=json > "${INIT_FILE}.tmp" && [ -s "${INIT_FILE}.tmp" ]; then
+    mv "${INIT_FILE}.tmp" "$INIT_FILE"
+    chmod 600 "$INIT_FILE"
+  else
+    rm -f "${INIT_FILE}.tmp"
+    echo "❌ vault operator init failed（vault 可能已初始化但 .init_keys 遺失）"
+    exit 1
+  fi
   echo "✅ Init keys saved to $INIT_FILE — BACK THIS UP SECURELY!"
 
-  # 自動 unseal（僅開發用 — 生產環境應人工 unseal 或用 AWS KMS auto-unseal）
-  for i in 0 1 2; do
-    KEY=$(python3 -c "import sys,json; print(json.load(open('$INIT_FILE'))['unseal_keys_b64'][$i])")
-    vault operator unseal "$KEY"
+  # 自動 unseal（取前 3 把 b64 金鑰；grep/sed 解析）
+  UNSEAL_KEYS=$(sed -n '/"unseal_keys_b64"/,/]/p' "$INIT_FILE" | grep -oE '"[A-Za-z0-9+/=]{40,}"' | tr -d '"' | head -3)
+  for KEY in $UNSEAL_KEYS; do
+    vault operator unseal "$KEY" >/dev/null
   done
 
-  ROOT_TOKEN=$(python3 -c "import sys,json; print(json.load(open('$INIT_FILE'))['root_token'])")
+  ROOT_TOKEN=$(grep -o '"root_token"[[:space:]]*:[[:space:]]*"[^"]*"' "$INIT_FILE" | sed 's/.*"root_token"[[:space:]]*:[[:space:]]*"//; s/"$//')
   export VAULT_TOKEN="$ROOT_TOKEN"
   echo "✅ Vault unsealed with root token"
 else
   echo "▶ Vault already initialized"
-  SEAL_JSON=$(vault status -format=json 2>/dev/null || true)
-  IS_SEALED=$(printf '%s' "$SEAL_JSON" | python3 -c "import sys,json; print(json.load(sys.stdin)['sealed'])" 2>/dev/null || echo "true")
-  if [[ "$IS_SEALED" == "True" || "$IS_SEALED" == "true" ]]; then
+  IS_SEALED=$(vault status -format=json 2>/dev/null | json_bool sealed || true)
+  [ -z "$IS_SEALED" ] && IS_SEALED=true
+  if [ "$IS_SEALED" = "true" ]; then
     echo "⚠️  Vault is sealed — automatic unseal is disabled in production mode"
     echo "    Run: vault operator unseal <key1> && vault operator unseal <key2> && vault operator unseal <key3>"
     exit 0
