@@ -488,7 +488,9 @@ services:
       - discovery.type=single-node
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required}
       - xpack.security.enabled=true
-      - xpack.security.http.ssl.enabled=false
+      - xpack.security.http.ssl.enabled=true
+      - xpack.security.http.ssl.key=/usr/share/elasticsearch/config/certs/es.key
+      - xpack.security.http.ssl.certificate=/usr/share/elasticsearch/config/certs/es.crt
       - xpack.security.transport.ssl.enabled=false
       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     ulimits:
@@ -501,11 +503,12 @@ services:
           memory: 768m
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./infra/elasticsearch/certs:/usr/share/elasticsearch/config/certs:ro
     ports:
       - "9200:9200"
       - "9300:9300"
     healthcheck:
-      test: ["CMD-SHELL", "curl -s -u elastic:${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required} http://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
+      test: ["CMD-SHELL", "curl -sk -u elastic:${ELASTIC_PASSWORD:?ELASTIC_PASSWORD is required} https://localhost:9200/_cluster/health | grep -qv '\"status\":\"red\"'"]
       interval: 15s
       timeout: 10s
       retries: 10
@@ -520,10 +523,15 @@ services:
     <<: *always-restart
     container_name: apim-kibana
     environment:
-      ELASTICSEARCH_HOSTS:    http://elasticsearch:9200
+      ELASTICSEARCH_HOSTS:    https://elasticsearch:9200
       ELASTICSEARCH_USERNAME: kibana_system
       ELASTICSEARCH_PASSWORD: ${KIBANA_PASSWORD:?KIBANA_PASSWORD is required}
+      # 信任 ES 自簽憑證（憑證 SAN 含 DNS:elasticsearch，故可用 full 驗證）
+      ELASTICSEARCH_SSL_CERTIFICATEAUTHORITIES: /certs/es.crt
+      ELASTICSEARCH_SSL_VERIFICATIONMODE: certificate
       XPACK_SECURITY_ENCRYPTIONKEY: ${KIBANA_ENCRYPTION_KEY:?KIBANA_ENCRYPTION_KEY is required}
+    volumes:
+      - ./infra/elasticsearch/certs:/certs:ro
     ports:
       - "0.0.0.0:5601:5601"
     depends_on:
@@ -1052,7 +1060,7 @@ services:
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin
-      ES_ADDRESSES:       http://elasticsearch:9200
+      ES_ADDRESSES:       https://elasticsearch:9200
       KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
       AUTH_SERVICE_URL:   http://auth-service:8081

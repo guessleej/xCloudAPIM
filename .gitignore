@@ -49,6 +49,7 @@ policy-engine/server
 # SSL certificates and private keys (auto-generated)
 infra/nginx/certs/
 infra/nginx/auth/.htpasswd
+infra/elasticsearch/certs/
 
 # Local tool version files
 .tool-versions
