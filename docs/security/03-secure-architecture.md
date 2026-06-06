@@ -47,7 +47,7 @@ services:
 | Internet → nginx | HTTP（開發） | **TLS 1.2+（強制 HTTPS 轉址）** |
 | nginx → 應用服務 | HTTP | TLS 或維持內網 + mTLS |
 | 服務 → postgres | ✅ **`sslmode=require`（TLSv1.3，P2-A 已上線）** | `sslmode=verify-full`（生產換正式 CA） |
-| 服務 → redis | 明文 + requirepass | **TLS + requirepass** |
+| 服務 → redis | ✅ **TLS + requirepass（cluster bus 亦 TLS，P2-A 已上線）** | 同（生產換正式 CA） |
 | 服務 → mongodb | ✅ **TLS（allowTLS，P2-A 已上線；app client tls=true）** | requireTLS（生產換正式 CA） |
 | 服務 → kafka | PLAINTEXT | **SASL_SSL** |
 | 服務 → elasticsearch | ✅ **HTTPS（xpack.security.http.ssl，P2-A 已上線）** | 同（生產換正式 CA 憑證） |

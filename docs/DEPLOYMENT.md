@@ -154,6 +154,34 @@ docker run --rm -v "$PWD/infra/mongodb/certs:/certs" alpine sh -c \
 > mongo-express（127.0.0.1 管理 UI）內部會注入衝突的 ssl/tls 選項，故維持明文
 > 連線（mongo 為 allowTLS）；app 流量（analytics/notification）已加密。
 
+### 5.5 Redis Cluster TLS 憑證（P2-A）
+
+6 個節點共用一張憑證，SAN 須涵蓋所有節點 DNS + IP（cluster bus 互信）。
+
+```bash
+mkdir -p infra/redis/certs
+docker run --rm -v "$PWD/infra/redis/certs:/certs" alpine/openssl \
+  req -x509 -nodes -days 825 -newkey rsa:2048 \
+  -keyout /certs/redis.key -out /certs/redis.crt -subj "/CN=redis-cluster" \
+  -addext "subjectAltName=DNS:redis-master-1,DNS:redis-master-2,DNS:redis-master-3,DNS:redis-replica-1,DNS:redis-replica-2,DNS:redis-replica-3,DNS:localhost,IP:127.0.0.1,IP:172.28.0.20,IP:172.28.0.21,IP:172.28.0.22,IP:172.28.0.23,IP:172.28.0.24,IP:172.28.0.25"
+docker run --rm -v "$PWD/infra/redis/certs:/certs" alpine sh -c "chmod 644 /certs/redis.key /certs/redis.crt"
+```
+
+> **既有 cluster 切 TLS 需重組**：cluster bus 由非-TLS 改 TLS 無法平滑切換，須清掉
+> master 資料卷（含 nodes.conf）重新組 cluster——**快取清空、session 失效**：
+> ```bash
+> docker compose stop redis-master-1 redis-master-2 redis-master-3 \
+>   redis-replica-1 redis-replica-2 redis-replica-3 redis-cluster-init
+> docker compose rm -f redis-master-1 redis-master-2 redis-master-3 \
+>   redis-replica-1 redis-replica-2 redis-replica-3 redis-cluster-init
+> docker volume rm xcloudapim_redis-master1-data xcloudapim_redis-master2-data xcloudapim_redis-master3-data
+> docker compose up -d redis-master-1 redis-master-2 redis-master-3 \
+>   redis-replica-1 redis-replica-2 redis-replica-3
+> docker compose run --rm redis-cluster-init        # TLS 組 cluster
+> ```
+> client（gateway/analytics/auth/policy-engine/subscription）由 `REDIS_TLS=true` 啟用 TLS，
+> 需重建映像；redis-exporter 用 `rediss://` + skip verify。全新部署一次帶 TLS 起即可，無此重組步驟。
+
 > 生產環境請改用正式 CA 簽發或 mkcert（見 `scripts/gen-certs.sh`）。
 
 ---
