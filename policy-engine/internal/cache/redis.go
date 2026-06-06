@@ -2,12 +2,23 @@ package cache
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
+
+// redisTLSConfig 在 REDIS_TLS=true 時回傳 TLS 設定（自簽憑證 → 跳過驗證）。
+func redisTLSConfig() *tls.Config {
+	if strings.EqualFold(os.Getenv("REDIS_TLS"), "true") {
+		return &tls.Config{InsecureSkipVerify: true} // #nosec G402 — 自簽憑證，內網
+	}
+	return nil
+}
 
 const (
 	KeyPolicyChain   = "policy:chain:%s"       // api_id
@@ -27,6 +38,7 @@ func NewRedisCache(addr, password string, db int, logger *zap.Logger) (*RedisCac
 		DialTimeout:  5 * time.Second,
 		ReadTimeout:  3 * time.Second,
 		WriteTimeout: 3 * time.Second,
+		TLSConfig:    redisTLSConfig(),
 	})
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

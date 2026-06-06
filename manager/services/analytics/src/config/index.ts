@@ -15,6 +15,7 @@ const schema = z.object({
   REDIS_PORT:          z.coerce.number().default(6379),
   REDIS_PASSWORD:      z.string().default(''),
   REDIS_DB:            z.coerce.number().default(2),
+  REDIS_TLS:           z.string().optional().transform((v) => (v ?? '').toLowerCase() === 'true'),
 
   // 即時統計 TTL（分鐘）
   REALTIME_WINDOW_MIN: z.coerce.number().default(60),

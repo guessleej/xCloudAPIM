@@ -8,6 +8,7 @@ const schema = z.object({
   REDIS_PORT:               z.coerce.number().default(6379),
   REDIS_PASSWORD:           z.string().default(''),
   REDIS_DB:                 z.coerce.number().default(0),
+  REDIS_TLS:                z.string().optional().transform((v) => (v ?? '').toLowerCase() === 'true'),
 
   AUTH_SERVICE_URL:         z.string().url().default('http://auth-service:8081'),
   REGISTRY_SERVICE_URL:     z.string().url().default('http://registry-service:8082'),

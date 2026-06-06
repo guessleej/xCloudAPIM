@@ -21,6 +21,8 @@ async function main(): Promise<void> {
     password: config.REDIS_PASSWORD || undefined,
     db:       config.REDIS_DB,
     lazyConnect: true,
+    // REDIS_TLS=true 時以 TLS 連線；自簽憑證 → 不驗證 CA
+    ...(config.REDIS_TLS ? { tls: { rejectUnauthorized: false } } : {}),
   })
   await redis.connect()
   log.info('Redis connected')

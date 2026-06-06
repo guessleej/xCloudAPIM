@@ -126,7 +126,14 @@ services:
     container_name: apim-redis-m1
     command: >
       redis-server
-      --port 6379
+      --port 0
+      --tls-port 6379
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/redis.crt
+      --tls-cluster yes
+      --tls-replication yes
+      --tls-auth-clients no
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
@@ -135,10 +142,11 @@ services:
       --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-master1-data:/data
+      - ./infra/redis/certs:/tls:ro
     ports:
       - "16379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
+      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/redis.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -152,7 +160,14 @@ services:
     container_name: apim-redis-m2
     command: >
       redis-server
-      --port 6379
+      --port 0
+      --tls-port 6379
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/redis.crt
+      --tls-cluster yes
+      --tls-replication yes
+      --tls-auth-clients no
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
@@ -161,10 +176,11 @@ services:
       --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-master2-data:/data
+      - ./infra/redis/certs:/tls:ro
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
+      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/redis.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -178,7 +194,14 @@ services:
     container_name: apim-redis-m3
     command: >
       redis-server
-      --port 6379
+      --port 0
+      --tls-port 6379
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/redis.crt
+      --tls-cluster yes
+      --tls-replication yes
+      --tls-auth-clients no
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
@@ -187,10 +210,11 @@ services:
       --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
       - redis-master3-data:/data
+      - ./infra/redis/certs:/tls:ro
     ports:
       - "16381:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "ping"]
+      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/redis.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -204,13 +228,22 @@ services:
     container_name: apim-redis-r1
     command: >
       redis-server
-      --port 6379
+      --port 0
+      --tls-port 6379
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/redis.crt
+      --tls-cluster yes
+      --tls-replication yes
+      --tls-auth-clients no
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
       --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - ./infra/redis/certs:/tls:ro
     ports:
       - "6382:6379"
     networks:
@@ -223,13 +256,22 @@ services:
     container_name: apim-redis-r2
     command: >
       redis-server
-      --port 6379
+      --port 0
+      --tls-port 6379
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/redis.crt
+      --tls-cluster yes
+      --tls-replication yes
+      --tls-auth-clients no
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
       --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - ./infra/redis/certs:/tls:ro
     ports:
       - "6383:6379"
     networks:
@@ -242,13 +284,22 @@ services:
     container_name: apim-redis-r3
     command: >
       redis-server
-      --port 6379
+      --port 0
+      --tls-port 6379
+      --tls-cert-file /tls/redis.crt
+      --tls-key-file /tls/redis.key
+      --tls-ca-cert-file /tls/redis.crt
+      --tls-cluster yes
+      --tls-replication yes
+      --tls-auth-clients no
       --cluster-enabled yes
       --cluster-config-file nodes.conf
       --cluster-node-timeout 5000
       --appendonly yes
       --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       --masterauth ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - ./infra/redis/certs:/tls:ro
     ports:
       - "6384:6379"
     networks:
@@ -258,9 +309,11 @@ services:
   redis-cluster-init:
     image: redis:7-alpine
     container_name: apim-redis-cluster-init
-    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --cluster create 172.28.0.20:6379 172.28.0.21:6379 172.28.0.22:6379 172.28.0.23:6379 172.28.0.24:6379 172.28.0.25:6379 --cluster-replicas 1 --cluster-yes"
+    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --tls --cacert /tls/redis.crt --cluster create 172.28.0.20:6379 172.28.0.21:6379 172.28.0.22:6379 172.28.0.23:6379 172.28.0.24:6379 172.28.0.25:6379 --cluster-replicas 1 --cluster-yes"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+    volumes:
+      - ./infra/redis/certs:/tls:ro
     depends_on:
       redis-master-1:
         condition: service_healthy
@@ -688,6 +741,7 @@ services:
       MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin&tls=true&tlsInsecure=true
       MONGO_DB:            ${MONGO_DB:-apim_analytics}
       REDIS_HOST:          redis-master-1
+      REDIS_TLS:               "true"
       REDIS_PORT:          6379
       REDIS_PASSWORD:      ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:            2
@@ -857,6 +911,7 @@ services:
       NODE_ENV:                   ${NODE_ENV:-production}
       PORT:                       8080
       REDIS_HOST:                 redis-master-1
+      REDIS_TLS:               "true"
       REDIS_PORT:                 6379
       REDIS_PASSWORD:             ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:                   0
@@ -1018,6 +1073,7 @@ services:
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
+      REDIS_TLS:               "true"
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       JWT_SECRET:         ${JWT_SECRET:?JWT_SECRET is required}
@@ -1147,6 +1203,7 @@ services:
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
+      REDIS_TLS:               "true"
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       KAFKA_BROKERS:      kafka:9092
@@ -1208,6 +1265,7 @@ services:
       POSTGRES_DB:        ${POSTGRES_DB:-apim}
       POSTGRES_SSL_MODE:  require
       REDIS_HOST:         redis-master-1
+      REDIS_TLS:               "true"
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:           0
@@ -1319,8 +1377,9 @@ services:
     <<: *always-restart
     container_name: apim-redis-exporter
     environment:
-      REDIS_ADDR:     redis://redis-master-1:6379
+      REDIS_ADDR:     rediss://redis-master-1:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
+      REDIS_EXPORTER_SKIP_TLS_VERIFICATION: "true"
     depends_on:
       redis-master-1:
         condition: service_healthy

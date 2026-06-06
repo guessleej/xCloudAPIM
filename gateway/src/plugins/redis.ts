@@ -18,6 +18,8 @@ const redisPlugin: FastifyPluginAsync = async (fastify) => {
     maxRetriesPerRequest: 3,
     enableReadyCheck: true,
     lazyConnect: false,
+    // REDIS_TLS=true 時以 TLS 連線；自簽憑證 → 不驗證 CA
+    ...(config.REDIS_TLS ? { tls: { rejectUnauthorized: false } } : {}),
   })
 
   redis.on('error', (err) => fastify.log.error({ err }, 'redis error'))

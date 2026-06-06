@@ -52,6 +52,7 @@ infra/nginx/auth/.htpasswd
 infra/elasticsearch/certs/
 infra/postgres/certs/
 infra/mongodb/certs/
+infra/redis/certs/
 
 # Local tool version files
 .tool-versions
