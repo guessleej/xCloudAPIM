@@ -333,6 +333,21 @@ done
 
 ---
 
+## 8.5 網路多網段分區（P2-B）部署注意
+
+4 網段（edge/app/svc/data）皆可由 `.env` 設定（見 `.env.example` P2-B 區段）。
+**既有單網段切多網段需 down/up 重建**，注意：
+
+- `docker compose down` **不會移除**已不在 compose 中的舊網段（`xcloudapim_apim-net`）；
+  其 /16 會與新 /24 子網重疊 → `up` 報 `Pool overlaps`。需手動
+  `docker network rm xcloudapim_apim-net` 後再 `up`。
+- `svc-net`/`data-net` 為 `internal: true`（無對外 egress）。**需要 runtime 下載的
+  init job（vault-init 裝 openssl）必須多接 `app-net` 取得 egress**，否則 apk 失敗。
+- redis 節點 IP 改到 `DATA_SUBNET`（預設 172.28.40.21-26），需清 master 資料卷重組 cluster。
+- 重建後 Vault 會 sealed；若 `.init_keys` 完好可手動 unseal，否則清 `vault-data` 重新 init
+  （JWT 金鑰重生 = token 重置）。
+- 驗證隔離：`docker exec apim-nginx sh -c "nc -z postgres 5432"` 應**連不到**（資料層已隔離）。
+
 ## 9. 疑難排解（首次部署常見坑）
 
 | 症狀 | 原因 | 解法 |
