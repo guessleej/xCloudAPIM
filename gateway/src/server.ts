@@ -1,4 +1,4 @@
-import Fastify, { type FastifyReply } from 'fastify'
+import Fastify, { type FastifyReply, type FastifyError } from 'fastify'
 import helmet from '@fastify/helmet'
 import underPressure from '@fastify/under-pressure'
 
@@ -38,7 +38,7 @@ export async function buildServer() {
   })
 
   // ─── 統一錯誤處理（不洩漏內部細節）────────────────────────────
-  server.setErrorHandler((err, request, reply) => {
+  server.setErrorHandler((err: FastifyError, request, reply) => {
     request.log.error({ err }, 'unhandled request error')
     const status = typeof err.statusCode === 'number' && err.statusCode >= 400 && err.statusCode < 600
       ? err.statusCode
