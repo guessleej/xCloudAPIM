@@ -485,7 +485,10 @@ services:
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: ${MONGO_USER:-apim_user}
       ME_CONFIG_MONGODB_ADMINPASSWORD: ${MONGO_PASSWORD:?MONGO_PASSWORD is required}
-      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/?tls=true&tlsInsecure=true
+      # mongo-express 為 127.0.0.1-only 管理 UI；其內部會自行注入 ssl/tls 選項而與
+      # URL 參數衝突（MongoParseError: All values of tls/ssl must be the same）。
+      # mongo 為 allowTLS，故此處維持明文連線（localhost），不影響 app 流量加密。
+      ME_CONFIG_MONGODB_URL:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/
       ME_CONFIG_BASICAUTH:             true
       ME_CONFIG_BASICAUTH_USERNAME:    ${MGMT_ADMIN_USER:-admin}
       ME_CONFIG_BASICAUTH_PASSWORD:    ${MGMT_ADMIN_PASSWORD:?MGMT_ADMIN_PASSWORD is required}
