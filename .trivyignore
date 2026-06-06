@@ -1,0 +1,10 @@
+# Trivy 漏洞豁免清單 — xCloudAPIM
+# 規範：docs/security/06-vulnerability-management.md §4
+#
+# 每筆豁免必須註明：CVE、原因（false-positive 或風險接受）、補償控制、
+# 到期重評日期、追蹤 issue 連結。無到期日的豁免視為無效。
+#
+# 範例格式：
+# CVE-2025-XXXXX  # false-positive：僅影響未使用之 X 功能。到期重評 2026-09-01。Issue #123
+#
+# （目前無豁免項目）

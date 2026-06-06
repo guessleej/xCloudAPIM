@@ -1,0 +1,30 @@
+# gitleaks 設定 — xCloudAPIM
+# 文件：docs/security/07-security-testing.md §6
+# 採用內建規則集，並針對測試假資料設定 allowlist（避免誤報）。
+
+title = "xCloudAPIM gitleaks config"
+
+[extend]
+useDefault = true   # 繼承 gitleaks 內建規則
+
+[allowlist]
+description = "全域忽略路徑與測試假資料"
+
+paths = [
+  '''\.cache/''',
+  '''node_modules/''',
+  '''(.*?)(test|spec|seed|example)(.*?)''',   # 測試 / 種子 / 範例檔
+  '''\.env\.example$''',
+  '''docs/security/.*\.md$''',                # 安全文件中的範例片段
+  '''package-lock\.json$''',
+  '''go\.sum$''',
+]
+
+# 已知的非機密占位字串（.env.example 等使用）
+regexes = [
+  '''change_me''',
+  '''local_[a-z_]*_change_me''',
+  '''ci_session_secret_min_32_chars_xx''',
+  '''your-[a-z-]+-here''',
+  '''xxxxxxxx''',
+]

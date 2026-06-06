@@ -1,0 +1,258 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    - cron: "0 2 * * *"   # 每日 UTC 02:00 全量掃描
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # 1. Secret Scanning — gitleaks（無例外閘門）
+  # ─────────────────────────────────────────────────────────────
+  secret-scan:
+    name: Secret Scan (gitleaks)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # 掃描完整歷史
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────
+  # 2. Dependency Review（PR 時比對新增相依的 CVE / 許可證）
+  # ─────────────────────────────────────────────────────────────
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          deny-licenses: GPL-3.0, LGPL-3.0
+
+  # ─────────────────────────────────────────────────────────────
+  # 3. SCA — Go govulncheck
+  # ─────────────────────────────────────────────────────────────
+  govulncheck:
+    name: SCA / Go Vuln (${{ matrix.service }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: auth-service,         dir: manager/services/auth }
+          - { service: registry-service,     dir: manager/services/registry }
+          - { service: subscription-service, dir: manager/services/subscription }
+          - { service: policy-engine,        dir: policy-engine }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+          cache-dependency-path: ${{ matrix.dir }}/go.sum
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+        env: { GOTOOLCHAIN: auto }
+      - name: Run govulncheck
+        working-directory: ${{ matrix.dir }}
+        run: govulncheck ./...
+        env: { GOTOOLCHAIN: auto }
+
+  # ─────────────────────────────────────────────────────────────
+  # 4. SCA — npm audit（Node 服務）
+  # ─────────────────────────────────────────────────────────────
+  npm-audit:
+    name: SCA / npm audit (${{ matrix.service }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: gateway,      dir: gateway }
+          - { service: bff,          dir: manager/bff }
+          - { service: studio,       dir: studio }
+          - { service: portal,       dir: portal }
+          - { service: analytics,    dir: manager/services/analytics }
+          - { service: notification, dir: manager/services/notification }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: ${{ matrix.dir }}/package-lock.json
+      - run: npm ci --prefix ${{ matrix.dir }} --prefer-offline
+      - name: npm audit (production deps)
+        working-directory: ${{ matrix.dir }}
+        # audit-level=critical：Next.js 14 等框架 High CVE 待計畫性大版本升級前豁免
+        run: npm audit --audit-level=critical --omit=dev
+
+  # ─────────────────────────────────────────────────────────────
+  # 5. SAST — gosec（Go 服務）
+  # ─────────────────────────────────────────────────────────────
+  gosec:
+    name: SAST / gosec
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        dir: [manager/services/auth, manager/services/registry, manager/services/subscription, policy-engine]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with: { go-version: "1.25" }
+      - name: Run gosec
+        uses: securego/gosec@master
+        with:
+          args: -severity high -confidence medium -exclude-dir=.cache ./${{ matrix.dir }}/...
+
+  # ─────────────────────────────────────────────────────────────
+  # 6. SAST — Semgrep（OWASP / 多語言規則）
+  # ─────────────────────────────────────────────────────────────
+  semgrep:
+    name: SAST / Semgrep
+    runs-on: ubuntu-24.04
+    container: { image: returntocorp/semgrep }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Semgrep
+        run: semgrep ci
+        env:
+          SEMGREP_RULES: >-
+            p/owasp-top-ten
+            p/security-audit
+            p/secrets
+            p/dockerfile
+            p/javascript
+            p/typescript
+            p/golang
+
+  # ─────────────────────────────────────────────────────────────
+  # 7. SAST — CodeQL（JS/TS + Go）
+  # ─────────────────────────────────────────────────────────────
+  codeql:
+    name: SAST / CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-24.04
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript, go]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          queries: security-and-quality
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
+
+  # ─────────────────────────────────────────────────────────────
+  # 8. IaC / 檔案系統掃描 — Trivy（相依 + 機密 + 設定錯誤）
+  # ─────────────────────────────────────────────────────────────
+  trivy-fs:
+    name: Trivy FS / IaC
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy filesystem scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scanners: "vuln,misconfig,secret"
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-fs.sarif
+          skip-dirs: ".cache,node_modules"
+      - name: Upload to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles('trivy-fs.sarif') != ''
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  # ─────────────────────────────────────────────────────────────
+  # 9. 容器映像掃描 — Trivy（建置映像後掃描）
+  # ─────────────────────────────────────────────────────────────
+  trivy-image:
+    name: Trivy Image (${{ matrix.service }})
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { service: gateway,             context: gateway }
+          - { service: bff,                 context: manager/bff }
+          - { service: auth-service,        context: manager/services/auth }
+          - { service: registry-service,    context: manager/services/registry }
+          - { service: subscription-service, context: manager/services/subscription }
+          - { service: policy-engine,       context: policy-engine }
+          - { service: portal,              context: portal }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t xcloudapim-${{ matrix.service }}:scan ${{ matrix.context }}
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: xcloudapim-${{ matrix.service }}:scan
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-${{ matrix.service }}.sarif
+      - name: Upload to Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.service)) != ''
+        with:
+          sarif_file: trivy-${{ matrix.service }}.sarif
+          category: trivy-${{ matrix.service }}
+
+  # ─────────────────────────────────────────────────────────────
+  # 10. DAST — OWASP ZAP Baseline（nightly，不阻擋日常 PR）
+  # ─────────────────────────────────────────────────────────────
+  dast-zap:
+    name: DAST / ZAP Baseline
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start stack (gateway only smoke)
+        run: |
+          echo "需在此啟動受測服務（gateway/bff/portal）後執行 ZAP。"
+          echo "完整堆疊啟動成本高；建議指向 staging 環境的 ZAP_TARGET。"
+      - name: ZAP Baseline Scan
+        if: env.ZAP_TARGET != ''
+        uses: zaproxy/action-baseline@v0.12.0
+        with:
+          target: ${{ env.ZAP_TARGET }}
+          fail_action: false   # 報告為主，High 開 issue
+        env:
+          ZAP_TARGET: ${{ vars.ZAP_TARGET }}
