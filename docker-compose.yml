@@ -453,6 +453,9 @@ services:
       - allowTLS
       - --tlsCertificateKeyFile
       - /etc/mongo-certs/mongo.pem
+      # MongoDB 7 要求啟用 TLS 時須指定信任鏈（SERVER-72839）；自簽憑證以自身作為 CA
+      - --tlsCAFile
+      - /etc/mongo-certs/mongo.crt
       - --tlsAllowConnectionsWithoutCertificates
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-apim_user}
