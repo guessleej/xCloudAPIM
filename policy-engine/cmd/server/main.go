@@ -2,11 +2,13 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -54,10 +56,15 @@ func main() {
 	defer db.Close()
 
 	// ─── Redis ────────────────────────────────────────────────
+	var redisTLS *tls.Config
+	if strings.EqualFold(os.Getenv("REDIS_TLS"), "true") {
+		redisTLS = &tls.Config{InsecureSkipVerify: true} // #nosec G402 — 自簽憑證，內網
+	}
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     cfg.Redis.Addr,
-		Password: cfg.Redis.Password,
-		DB:       cfg.Redis.DB,
+		Addr:      cfg.Redis.Addr,
+		Password:  cfg.Redis.Password,
+		DB:        cfg.Redis.DB,
+		TLSConfig: redisTLS,
 	})
 	ctx5, cancel5 := context.WithTimeout(context.Background(), 5*time.Second)
 	if err := rdb.Ping(ctx5).Err(); err != nil {
