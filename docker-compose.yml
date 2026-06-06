@@ -360,9 +360,20 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # P2-A：dual-listener — 內部/host 保留 PLAINTEXT（inter-broker、kafka-init），
+      # 新增 SASL_SSL://9093 給 app client（SASL/PLAIN + TLS 自簽憑證）。
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092,SASL_SSL://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092,SASL_SSL://kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,SASL_SSL:SASL_SSL
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
+      KAFKA_LISTENER_NAME_SASL_SSL_PLAIN_SASL_JAAS_CONFIG: 'org.apache.kafka.common.security.plain.PlainLoginModule required user_apim="${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}";'
+      KAFKA_SSL_KEYSTORE_FILENAME: kafka.keystore.jks
+      KAFKA_SSL_KEYSTORE_CREDENTIALS: kafka_keystore_creds
+      KAFKA_SSL_KEY_CREDENTIALS: kafka_key_creds
+      KAFKA_SSL_TRUSTSTORE_FILENAME: kafka.truststore.jks
+      KAFKA_SSL_TRUSTSTORE_CREDENTIALS: kafka_truststore_creds
+      KAFKA_SSL_CLIENT_AUTH: none
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -375,6 +386,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     volumes:
       - kafka-data:/var/lib/kafka/data
+      - ./infra/kafka/secrets:/etc/kafka/secrets:ro
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -735,7 +747,9 @@ services:
     environment:
       NODE_ENV:            ${NODE_ENV:-production}
       PORT:                8085
-      KAFKA_BROKERS:       kafka:9092
+      KAFKA_BROKERS:       kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       KAFKA_GROUP_ID:      analytics-service
       KAFKA_CLIENT_ID:     analytics-service
       MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin&tls=true&tlsInsecure=true
@@ -788,7 +802,9 @@ services:
     environment:
       NODE_ENV:              ${NODE_ENV:-production}
       PORT:                  8086
-      KAFKA_BROKERS:         kafka:9092
+      KAFKA_BROKERS:         kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       KAFKA_GROUP_ID:        notification-service
       KAFKA_CLIENT_ID:       notification-service
       MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/apim_notifications?authSource=admin&tls=true&tlsInsecure=true
@@ -1144,7 +1160,9 @@ services:
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin&tls=true&tlsInsecure=true
       ES_ADDRESSES:       https://elasticsearch:9200
-      KAFKA_BROKERS:      kafka:9092
+      KAFKA_BROKERS:      kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       KAFKA_TOPIC_PREFIX: apim
       AUTH_SERVICE_URL:   http://auth-service:8081
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318

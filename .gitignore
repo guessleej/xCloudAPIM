@@ -53,6 +53,7 @@ infra/elasticsearch/certs/
 infra/postgres/certs/
 infra/mongodb/certs/
 infra/redis/certs/
+infra/kafka/secrets/
 
 # Local tool version files
 .tool-versions

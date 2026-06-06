@@ -36,6 +36,11 @@ export async function startKafkaConsumer(log: Logger): Promise<void> {
     clientId: config.KAFKA_CLIENT_ID,
     brokers:  config.KAFKA_BROKERS.split(','),
     logLevel: logLevel.WARN,
+    // KAFKA_SASL_USERNAME 設定時改走 SASL_SSL（自簽憑證 → 不驗證 CA）
+    ...(config.KAFKA_SASL_USERNAME ? {
+      ssl:  { rejectUnauthorized: false },
+      sasl: { mechanism: 'plain' as const, username: config.KAFKA_SASL_USERNAME, password: config.KAFKA_SASL_PASSWORD },
+    } : {}),
   })
 
   consumer = kafka.consumer({ groupId: config.KAFKA_GROUP_ID })

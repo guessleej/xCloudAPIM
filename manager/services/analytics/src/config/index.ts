@@ -7,6 +7,8 @@ const schema = z.object({
   KAFKA_BROKERS:       z.string().default('kafka:9092'),
   KAFKA_GROUP_ID:      z.string().default('analytics-service'),
   KAFKA_CLIENT_ID:     z.string().default('analytics-service'),
+  KAFKA_SASL_USERNAME: z.string().default(''),
+  KAFKA_SASL_PASSWORD: z.string().default(''),
 
   MONGO_URI:           z.string().url(),
   MONGO_DB:            z.string().default('apim_analytics'),
