@@ -377,8 +377,13 @@ services:
     image: hashicorp/vault:1.15
     <<: *always-restart
     container_name: apim-vault
-    command: vault server -config=/vault/config/config.hcl
-    user: "0"   # run as root so vault can write to the data volume on first start
+    # 繞過映像 entrypoint 的 su-exec 降權：官方 entrypoint 以 root 啟動時會降權成
+    # vault(uid 100) 並只 chown /vault/file、/vault/logs，不含自訂儲存路徑 /vault/data，
+    # 導致 vault(100) 無法寫入 root 擁有的 /vault/data（mkdir core: permission denied）。
+    # 直接以 root 執行 vault server 即可寫入；IPC_LOCK 由 cap_add 提供。
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["exec vault server -config=/vault/config/config.hcl"]
+    user: "0"   # run as root so vault can write to the data volume
     environment:
       VAULT_ADDR: http://127.0.0.1:8200
     cap_add:
