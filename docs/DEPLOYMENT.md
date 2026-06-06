@@ -134,6 +134,26 @@ docker run --rm -v "$PWD/infra/postgres/certs:/certs" alpine sh -c \
   "chown 70:70 /certs/server.key /certs/server.crt && chmod 600 /certs/server.key && chmod 644 /certs/server.crt"
 ```
 
+### 5.4 MongoDB TLS 憑證（P2-A）
+
+MongoDB 需 cert+key **合併 PEM**；MongoDB 7 啟用 TLS 須同時指定信任鏈
+（`--tlsCAFile`，SERVER-72839），自簽憑證以自身為 CA。
+
+```bash
+mkdir -p infra/mongodb/certs
+docker run --rm -v "$PWD/infra/mongodb/certs:/certs" alpine/openssl \
+  req -x509 -nodes -days 825 -newkey rsa:2048 \
+  -keyout /certs/mongo.key -out /certs/mongo.crt \
+  -subj "/CN=mongodb" \
+  -addext "subjectAltName=DNS:mongodb,DNS:localhost,IP:127.0.0.1,IP:172.28.0.50"
+# 合併 PEM，並設為 mongodb 使用者(uid 999) 可讀
+docker run --rm -v "$PWD/infra/mongodb/certs:/certs" alpine sh -c \
+  "cat /certs/mongo.key /certs/mongo.crt > /certs/mongo.pem && chown 999:999 /certs/mongo.pem && chmod 600 /certs/mongo.pem"
+```
+
+> mongo-express（127.0.0.1 管理 UI）內部會注入衝突的 ssl/tls 選項，故維持明文
+> 連線（mongo 為 allowTLS）；app 流量（analytics/notification）已加密。
+
 > 生產環境請改用正式 CA 簽發或 mkcert（見 `scripts/gen-certs.sh`）。
 
 ---
