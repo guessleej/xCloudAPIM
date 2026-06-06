@@ -92,10 +92,12 @@ docker compose config -q && echo "✅ compose 設定有效"
 
 ---
 
-## 5. 產生 TLS 憑證（nginx 需要）
+## 5. 產生 TLS 憑證
 
-`infra/nginx/certs/` 被 `.gitignore` 忽略，首次部署需自行產生。
-**注意**：Docker 首次掛載會把該目錄建為 `root` 擁有，故用 root 容器產生：
+憑證目錄被 `.gitignore` 忽略，首次部署需自行產生。
+**注意**：Docker 首次掛載會把目錄建為 `root` 擁有，故用 root 容器產生。
+
+### 5.1 nginx 反向代理憑證
 
 ```bash
 docker run --rm -v "$PWD/infra/nginx/certs:/certs" alpine/openssl \
@@ -103,6 +105,19 @@ docker run --rm -v "$PWD/infra/nginx/certs:/certs" alpine/openssl \
   -keyout /certs/apim.key -out /certs/apim.crt \
   -subj "/C=TW/ST=Taiwan/L=Taipei/O=xCloudAPIM/CN=*.apim.local" \
   -addext "subjectAltName=DNS:localhost,DNS:*.apim.local,DNS:apim.local"
+```
+
+### 5.2 Elasticsearch HTTP TLS 憑證（P2-A）
+
+```bash
+mkdir -p infra/elasticsearch/certs
+docker run --rm -v "$PWD/infra/elasticsearch/certs:/certs" alpine/openssl \
+  req -x509 -nodes -days 825 -newkey rsa:2048 \
+  -keyout /certs/es.key -out /certs/es.crt \
+  -subj "/CN=elasticsearch" \
+  -addext "subjectAltName=DNS:elasticsearch,DNS:localhost,IP:127.0.0.1,IP:172.28.0.60"
+# ES 以 uid 1000 執行，金鑰需可讀（alpine/openssl 的 entrypoint 是 openssl，chmod 要另開 alpine）
+docker run --rm -v "$PWD/infra/elasticsearch/certs:/certs" alpine sh -c "chmod 644 /certs/es.key /certs/es.crt"
 ```
 
 > 生產環境請改用正式 CA 簽發或 mkcert（見 `scripts/gen-certs.sh`）。
@@ -149,6 +164,20 @@ docker compose up -d          # 啟動全部 ~38 容器
 
 啟動順序由 `depends_on` + healthcheck 自動處理：
 infra（postgres/redis/kafka/mongo/es）→ flyway migration → 應用服務 → nginx。
+
+### 6.4 Elasticsearch 內建使用者密碼（kibana_system）
+
+ES 首次啟動只設定 `elastic` 超級使用者密碼；內建的 `kibana_system` 使用者
+密碼需另外設定成 `KIBANA_PASSWORD`，否則 kibana 連 ES 會 `security_exception`：
+
+```bash
+EP=$(grep '^ELASTIC_PASSWORD=' .env | cut -d= -f2)
+KP=$(grep '^KIBANA_PASSWORD=' .env | cut -d= -f2)
+docker exec apim-elasticsearch sh -c \
+  "curl -sk -u elastic:$EP -X POST https://localhost:9200/_security/user/kibana_system/_password \
+   -H 'Content-Type: application/json' -d '{\"password\":\"$KP\"}'"
+docker compose restart kibana
+```
 
 ---
 

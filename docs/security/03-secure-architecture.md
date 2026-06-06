@@ -50,7 +50,7 @@ services:
 | 服務 → redis | 明文 + requirepass | **TLS + requirepass** |
 | 服務 → mongodb | 明文 + 帳密 | **TLS + 帳密** |
 | 服務 → kafka | PLAINTEXT | **SASL_SSL** |
-| 服務 → elasticsearch | HTTP + 帳密 | **HTTPS（xpack.security.http.ssl）** |
+| 服務 → elasticsearch | ✅ **HTTPS（xpack.security.http.ssl，P2-A 已上線）** | 同（生產換正式 CA 憑證） |
 | 服務 → vault | HTTP（開發） | **HTTPS（config.hcl TLS 段）** |
 
 憑證產生工具：[`scripts/gen-certs.sh`](../../scripts/gen-certs.sh)。
