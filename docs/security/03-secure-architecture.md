@@ -49,7 +49,7 @@ services:
 | 服務 → postgres | ✅ **`sslmode=require`（TLSv1.3，P2-A 已上線）** | `sslmode=verify-full`（生產換正式 CA） |
 | 服務 → redis | ✅ **TLS + requirepass（cluster bus 亦 TLS，P2-A 已上線）** | 同（生產換正式 CA） |
 | 服務 → mongodb | ✅ **TLS（allowTLS，P2-A 已上線；app client tls=true）** | requireTLS（生產換正式 CA） |
-| 服務 → kafka | PLAINTEXT | **SASL_SSL** |
+| 服務 → kafka | ✅ **SASL_SSL（SASL/PLAIN + TLS，P2-A 已上線）** | 同（生產換正式 CA / SCRAM） |
 | 服務 → elasticsearch | ✅ **HTTPS（xpack.security.http.ssl，P2-A 已上線）** | 同（生產換正式 CA 憑證） |
 | 服務 → vault | HTTP（開發） | **HTTPS（config.hcl TLS 段）** |
 
@@ -122,9 +122,10 @@ USER 10001:10001                 # non-root
 
 | 階段 | 範圍 | 風險 |
 |------|------|------|
-| **P0（本次）** | SSDLC 文件、CI/CD 安全閘門、secret scanning、SAST/SCA、容器掃描、安全編碼基線 | 低（不改執行架構） |
-| **P1** | 容器強化（non-root / read-only / cap-drop）、統一錯誤回應、SSRF allow-list、GraphQL complexity | 中 |
-| **P2** | 網路多網段分區、生產 TLS（所有資料層）、Vault 動態憑證 | 中高（需逐服務驗證） |
-| **P3** | 服務間 mTLS、不可變稽核日誌、自動金鑰輪轉 | 高 |
+| **P0** ✅ | SSDLC 文件、CI/CD 安全閘門、secret scanning、SAST/SCA、容器掃描、安全編碼基線 | 低（不改執行架構） |
+| **P1** ✅ | 容器強化（non-root / read-only / cap-drop）、統一錯誤回應、SSRF allow-list、GraphQL complexity | 中 |
+| **P2-A** ✅ | **生產 TLS（資料層全部）：Postgres / Redis(含 cluster bus) / MongoDB / Kafka(SASL_SSL) / Elasticsearch** | 中高（已逐服務驗證上線） |
+| **P2-B** ⬜ | 網路多網段分區、Vault 動態憑證 | 中高 |
+| **P3** ⬜ | 服務間 mTLS、不可變稽核日誌、自動金鑰輪轉 | 高 |
 
 > 本次（P0）聚焦「不改變執行架構」的安全內建；P1–P3 以 issue 追蹤、分批驗證上線，避免破壞既有運行系統。

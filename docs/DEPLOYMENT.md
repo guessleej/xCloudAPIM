@@ -182,6 +182,34 @@ docker run --rm -v "$PWD/infra/redis/certs:/certs" alpine sh -c "chmod 644 /cert
 > client（gateway/analytics/auth/policy-engine/subscription）由 `REDIS_TLS=true` 啟用 TLS，
 > 需重建映像；redis-exporter 用 `rediss://` + skip verify。全新部署一次帶 TLS 起即可，無此重組步驟。
 
+### 5.6 Kafka SASL_SSL 憑證（JKS，P2-A）
+
+Kafka（Java）需 **JKS** keystore/truststore（非 PEM）。需 `.env` 先有
+`KAFKA_SASL_PASSWORD`（SASL/PLAIN 密碼）與 `KAFKA_SSL_PASSWORD`（keystore 密碼）：
+
+```bash
+grep -q '^KAFKA_SASL_PASSWORD=' .env || echo "KAFKA_SASL_PASSWORD=$(openssl rand -hex 24)" >> .env
+grep -q '^KAFKA_SSL_PASSWORD='  .env || echo "KAFKA_SSL_PASSWORD=$(openssl rand -hex 16)"  >> .env
+mkdir -p infra/kafka/secrets
+KPW=$(grep '^KAFKA_SSL_PASSWORD=' .env | cut -d= -f2)
+docker run --rm -e KPW="$KPW" -v "$PWD/infra/kafka/secrets:/w" confluentinc/cp-kafka:7.6.0 bash -c '
+  set -e; cd /w
+  openssl req -x509 -nodes -days 825 -newkey rsa:2048 -keyout kafka.key -out kafka.crt \
+    -subj /CN=kafka -addext subjectAltName=DNS:kafka,DNS:localhost,IP:127.0.0.1,IP:172.28.0.31 2>/dev/null
+  openssl pkcs12 -export -in kafka.crt -inkey kafka.key -name kafka -out kafka.p12 -password pass:$KPW 2>/dev/null
+  keytool -importkeystore -srckeystore kafka.p12 -srcstoretype PKCS12 -srcstorepass $KPW \
+    -destkeystore kafka.keystore.jks -deststorepass $KPW -noprompt 2>/dev/null
+  keytool -import -alias kafka-ca -file kafka.crt -keystore kafka.truststore.jks -storepass $KPW -noprompt 2>/dev/null
+  rm -f kafka.p12; chmod 644 kafka.keystore.jks kafka.truststore.jks'
+```
+
+重點（踩過的坑）：
+- broker 用 **dual-listener**：PLAINTEXT://9092（inter-broker、kafka-init 不變）+ EXTERNAL(SASL_SSL)://9093（app client）。
+- listener 名稱**避免底線**（cp-kafka env→property 把 `_`→`.` 會破壞 `listener.name.*` 鍵），故命名 `EXTERNAL` 而非 `SASL_SSL`。
+- SASL 啟用時 image 要求 `KAFKA_OPTS` 非空（dub ensure）→ 給無害佔位值；JAAS 由 `KAFKA_LISTENER_NAME_EXTERNAL_PLAIN_SASL_JAAS_CONFIG` 提供。
+- 必須用 `KAFKA_SSL_KEYSTORE_LOCATION`/`_PASSWORD`（FILENAME/CREDENTIALS 檔案模式在此 image 未套用 → `ssl.keystore.location=null` → handshake_failure）。
+- client（analytics/notification kafkajs、registry kafka-go）由 `KAFKA_SASL_USERNAME`/`KAFKA_SASL_PASSWORD` 啟用 SASL_SSL，連 `kafka:9093`。
+
 > 生產環境請改用正式 CA 簽發或 mkcert（見 `scripts/gen-certs.sh`）。
 
 ---
