@@ -62,6 +62,16 @@ services:
     image: postgres:16-alpine
     <<: *always-restart
     container_name: apim-postgres
+    # P2-A：啟用 TLS。server.key 須 chmod 600 且擁有者為 postgres 使用者(uid 70 alpine)，
+    # 否則 postgres 拒絕啟動。ssl=on 同時接受明文與加密連線（client 以 sslmode 決定）。
+    command:
+      - postgres
+      - -c
+      - ssl=on
+      - -c
+      - ssl_cert_file=/etc/pg-certs/server.crt
+      - -c
+      - ssl_key_file=/etc/pg-certs/server.key
     environment:
       POSTGRES_DB:       ${POSTGRES_DB:-apim}
       POSTGRES_USER:     ${POSTGRES_USER:-apim_user}
@@ -70,6 +80,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./scripts/postgres-init.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
+      - ./infra/postgres/certs:/etc/pg-certs:ro
       - ./seeds:/seeds:ro
     ports:
       - "15433:5432"

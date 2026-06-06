@@ -50,6 +50,7 @@ policy-engine/server
 infra/nginx/certs/
 infra/nginx/auth/.htpasswd
 infra/elasticsearch/certs/
+infra/postgres/certs/
 
 # Local tool version files
 .tool-versions
