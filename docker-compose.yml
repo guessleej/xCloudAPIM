@@ -368,6 +368,9 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_SASL_ENABLED_MECHANISMS: PLAIN
       KAFKA_LISTENER_NAME_SASL_SSL_PLAIN_SASL_JAAS_CONFIG: 'org.apache.kafka.common.security.plain.PlainLoginModule required user_apim="${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}";'
+      # cp-kafka 映像在 SASL 啟用時要求 KAFKA_OPTS 非空（dub ensure）；實際 JAAS 由上方
+      # listener-specific 設定提供，此處給無害佔位值以通過映像啟動檢查。
+      KAFKA_OPTS: "-Dnop=true"
       KAFKA_SSL_KEYSTORE_FILENAME: kafka.keystore.jks
       KAFKA_SSL_KEYSTORE_CREDENTIALS: kafka_keystore_creds
       KAFKA_SSL_KEY_CREDENTIALS: kafka_key_creds
