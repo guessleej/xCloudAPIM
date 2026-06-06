@@ -1174,6 +1174,9 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-registry
     environment:
+      VAULT_ADDR:         http://vault:8200
+      VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
+      VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8082
       POSTGRES_HOST:      postgres
@@ -1239,6 +1242,9 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-policy-engine
     environment:
+      VAULT_ADDR:         http://vault:8200
+      VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
+      VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8083
       POSTGRES_HOST:      postgres
@@ -1301,6 +1307,9 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-subscription
     environment:
+      VAULT_ADDR:         http://vault:8200
+      VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
+      VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8084
       POSTGRES_HOST:      postgres

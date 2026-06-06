@@ -1,15 +1,29 @@
 package repository
 
 import (
+	"database/sql"
 	"time"
 
 	"github.com/jmoiron/sqlx"
+	"go.uber.org/zap"
+
+	"github.com/xcloudapim/subscription-service/internal/vaultdb"
 )
 
 func NewDB(dsn string, maxConns int) (*sqlx.DB, error) {
-	db, err := sqlx.Connect("postgres", dsn)
-	if err != nil {
-		return nil, err
+	var db *sqlx.DB
+	if vaultdb.Enabled() {
+		conn, cerr := vaultdb.NewConnector(zap.NewNop())
+		if cerr != nil {
+			return nil, cerr
+		}
+		db = sqlx.NewDb(sql.OpenDB(conn), "postgres")
+	} else {
+		var cerr error
+		db, cerr = sqlx.Connect("postgres", dsn)
+		if cerr != nil {
+			return nil, cerr
+		}
 	}
 	db.SetMaxOpenConns(maxConns)
 	db.SetMaxIdleConns(maxConns / 2)

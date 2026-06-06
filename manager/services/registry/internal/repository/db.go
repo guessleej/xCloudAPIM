@@ -2,12 +2,15 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
+
+	"github.com/xcloudapim/registry-service/internal/vaultdb"
 )
 
 type DB struct {
@@ -16,9 +19,19 @@ type DB struct {
 }
 
 func NewDB(dsn string, maxConns, minConns int, logger *zap.Logger) (*DB, error) {
-	db, err := sqlx.Connect("postgres", dsn)
-	if err != nil {
-		return nil, fmt.Errorf("connect postgres: %w", err)
+	var db *sqlx.DB
+	if vaultdb.Enabled() {
+		conn, cerr := vaultdb.NewConnector(logger)
+		if cerr != nil {
+			return nil, fmt.Errorf("vault dynamic db creds: %w", cerr)
+		}
+		db = sqlx.NewDb(sql.OpenDB(conn), "postgres")
+	} else {
+		var cerr error
+		db, cerr = sqlx.Connect("postgres", dsn)
+		if cerr != nil {
+			return nil, fmt.Errorf("connect postgres: %w", cerr)
+		}
 	}
 	db.SetMaxOpenConns(maxConns)
 	db.SetMaxIdleConns(minConns)
