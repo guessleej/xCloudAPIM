@@ -10,6 +10,7 @@ import {
   matchRoute, syncRoutes, loadFromCache, fullSync, getRouteCount,
 } from './proxy/route-table.js'
 import { forwardRequest } from './proxy/upstream.js'
+import { checkUpstream } from './proxy/ssrf-guard.js'
 import { createExecContext, type ExecContext } from './pipeline/types.js'
 import { executePhase } from './pipeline/executor.js'
 
@@ -28,7 +29,23 @@ export async function buildServer() {
   await server.register(redisPlugin)
   await server.register(metricsPlugin)
   await server.register(requestIdPlugin)
-  await server.register(helmet, { contentSecurityPolicy: false, crossOriginEmbedderPolicy: false })
+  await server.register(helmet, {
+    // 閘道代理任意上游內容，故關閉 CSP/COEP，避免破壞上游回應；
+    // 但保留 HSTS 與其餘安全標頭（X-Content-Type-Options、X-Frame-Options…）。
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    hsts: { maxAge: 15_552_000, includeSubDomains: true },
+  })
+
+  // ─── 統一錯誤處理（不洩漏內部細節）────────────────────────────
+  server.setErrorHandler((err, request, reply) => {
+    request.log.error({ err }, 'unhandled request error')
+    const status = typeof err.statusCode === 'number' && err.statusCode >= 400 && err.statusCode < 600
+      ? err.statusCode
+      : 500
+    // 5xx 一律回傳通用訊息；4xx 可回傳訊息（屬用戶端錯誤）
+    reply.code(status).send({ error: status >= 500 ? 'internal error' : err.message })
+  })
   await server.register(underPressure, {
     maxEventLoopDelay: 1000,
     maxEventLoopUtilization: 0.98,
@@ -56,6 +73,16 @@ export async function buildServer() {
     const route = matchRoute(host, path, method)
     if (!route) {
       return reply.code(404).send({ error: 'no route found' })
+    }
+
+    // ─── SSRF Guard：驗證上游目標位址 ───────────────────────
+    const ssrf = await checkUpstream(route.upstreamUrl)
+    if (!ssrf.ok) {
+      server.log.warn(
+        { apiId: route.apiId, upstream: route.upstreamUrl, reason: ssrf.reason },
+        'upstream blocked by SSRF guard',
+      )
+      return reply.code(502).send({ error: 'bad gateway' })  // 不洩漏封鎖原因
     }
 
     // Normalise headers to lowercase Record<string,string>

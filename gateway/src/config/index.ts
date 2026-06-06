@@ -24,6 +24,12 @@ const schema = z.object({
   PROXY_KEEP_ALIVE_TIMEOUT_MS: z.coerce.number().default(60_000),
   MAX_BODY_SIZE_MB:          z.coerce.number().default(10),
 
+  // ─── SSRF Guard（upstream 目標位址驗證）──────────────────────
+  // 'auto' = 生產封鎖私有 IP，其他環境放行（方便 docker 內網開發）
+  UPSTREAM_BLOCK_PRIVATE_IPS: z.enum(['auto', 'true', 'false']).default('auto'),
+  // 逗號分隔的嚴格 allow-list（host 或 host:port）；留空表示不啟用 allow-list
+  UPSTREAM_ALLOWED_HOSTS:     z.string().default(''),
+
   OTEL_EXPORTER_OTLP_ENDPOINT: z.string().default('http://localhost:4318'),
   OTEL_SERVICE_NAME:           z.string().default('api-gateway'),
 
