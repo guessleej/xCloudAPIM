@@ -120,6 +120,20 @@ docker run --rm -v "$PWD/infra/elasticsearch/certs:/certs" alpine/openssl \
 docker run --rm -v "$PWD/infra/elasticsearch/certs:/certs" alpine sh -c "chmod 644 /certs/es.key /certs/es.crt"
 ```
 
+### 5.3 Postgres TLS 憑證（P2-A）
+
+```bash
+mkdir -p infra/postgres/certs
+docker run --rm -v "$PWD/infra/postgres/certs:/certs" alpine/openssl \
+  req -x509 -nodes -days 825 -newkey rsa:2048 \
+  -keyout /certs/server.key -out /certs/server.crt \
+  -subj "/CN=postgres" \
+  -addext "subjectAltName=DNS:postgres,DNS:localhost,IP:127.0.0.1,IP:172.28.0.10"
+# postgres 拒絕啟動若 key 權限過寬：須 chmod 600 且擁有者為 postgres 使用者(uid 70 alpine)
+docker run --rm -v "$PWD/infra/postgres/certs:/certs" alpine sh -c \
+  "chown 70:70 /certs/server.key /certs/server.crt && chmod 600 /certs/server.key && chmod 644 /certs/server.crt"
+```
+
 > 生產環境請改用正式 CA 簽發或 mkcert（見 `scripts/gen-certs.sh`）。
 
 ---

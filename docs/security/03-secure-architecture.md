@@ -46,7 +46,7 @@ services:
 |------|------|------------|
 | Internet → nginx | HTTP（開發） | **TLS 1.2+（強制 HTTPS 轉址）** |
 | nginx → 應用服務 | HTTP | TLS 或維持內網 + mTLS |
-| 服務 → postgres | `sslmode=disable` | `sslmode=verify-full` |
+| 服務 → postgres | ✅ **`sslmode=require`（TLSv1.3，P2-A 已上線）** | `sslmode=verify-full`（生產換正式 CA） |
 | 服務 → redis | 明文 + requirepass | **TLS + requirepass** |
 | 服務 → mongodb | 明文 + 帳密 | **TLS + 帳密** |
 | 服務 → kafka | PLAINTEXT | **SASL_SSL** |
