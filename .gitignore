@@ -58,3 +58,4 @@ infra/kafka/secrets/
 # Local tool version files
 .tool-versions
 mise.toml
+infra/mtls/certs/

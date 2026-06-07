@@ -13,6 +13,7 @@ import (
 	"github.com/xcloudapim/auth-service/internal/cache"
 	"github.com/xcloudapim/auth-service/internal/config"
 	"github.com/xcloudapim/auth-service/internal/handler"
+	"github.com/xcloudapim/auth-service/internal/mtls"
 	"github.com/xcloudapim/auth-service/internal/repository"
 	"github.com/xcloudapim/auth-service/internal/service"
 	"github.com/xcloudapim/auth-service/internal/vault"
@@ -134,6 +135,31 @@ func main() {
 			logger.Fatal("server error", zap.Error(err))
 		}
 	}()
+
+	// ─── mTLS Listener（P3-3，dual-listener；plain port 保留以利漸進遷移）──
+	if mtls.Enabled() {
+		tlsCfg, terr := mtls.ServerTLSConfig()
+		if terr != nil {
+			logger.Fatal("mTLS config failed", zap.Error(terr))
+		}
+		mport := os.Getenv("MTLS_PORT")
+		if mport == "" {
+			mport = "9443"
+		}
+		mtlsSrv := &http.Server{
+			Addr:         ":" + mport,
+			Handler:      router,
+			TLSConfig:    tlsCfg,
+			ReadTimeout:  cfg.Server.ReadTimeout,
+			WriteTimeout: cfg.Server.WriteTimeout,
+		}
+		go func() {
+			logger.Info("mTLS server listening", zap.String("addr", mtlsSrv.Addr))
+			if err := mtlsSrv.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				logger.Fatal("mTLS server error", zap.Error(err))
+			}
+		}()
+	}
 
 	<-quit
 	logger.Info("shutting down auth service...")

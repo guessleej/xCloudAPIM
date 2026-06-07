@@ -20,6 +20,7 @@ import (
 	"github.com/xcloudapim/subscription-service/internal/config"
 	grpcserver "github.com/xcloudapim/subscription-service/internal/grpc"
 	"github.com/xcloudapim/subscription-service/internal/handler"
+	"github.com/xcloudapim/subscription-service/internal/mtls"
 	"github.com/xcloudapim/subscription-service/internal/repository"
 	"github.com/xcloudapim/subscription-service/internal/service"
 )
@@ -102,6 +103,31 @@ func main() {
 			log.Fatal("http", zap.Error(err))
 		}
 	}()
+
+	// ─── mTLS Listener（P3-3，dual-listener；plain port 保留）──────
+	if mtls.Enabled() {
+		tlsCfg, terr := mtls.ServerTLSConfig()
+		if terr != nil {
+			log.Fatal("mTLS config", zap.Error(terr))
+		}
+		mport := os.Getenv("MTLS_PORT")
+		if mport == "" {
+			mport = "9443"
+		}
+		mtlsSrv := &http.Server{
+			Addr:         ":" + mport,
+			Handler:      router,
+			TLSConfig:    tlsCfg,
+			ReadTimeout:  15 * time.Second,
+			WriteTimeout: 15 * time.Second,
+		}
+		go func() {
+			log.Info("mTLS server starting", zap.String("addr", mtlsSrv.Addr))
+			if err := mtlsSrv.ListenAndServeTLS("", ""); err != nil && err != http.ErrServerClosed {
+				log.Fatal("mtls", zap.Error(err))
+			}
+		}()
+	}
 
 	go func() {
 		if err := grpcSrv.Start(); err != nil {
