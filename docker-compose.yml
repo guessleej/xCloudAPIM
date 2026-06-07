@@ -939,6 +939,8 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-bff
     environment:
+      MTLS_ENABLED:             ${MTLS_ENABLED:-false}
+      MTLS_PORT:                "9443"
       NODE_ENV:                   ${NODE_ENV:-production}
       PORT:                       4000
       AUTH_SERVICE_URL:           http://auth-service:8081
@@ -983,6 +985,8 @@ services:
         reservations:
           cpus: '0.1'
           memory: 128M
+    volumes:
+      - ./infra/mtls/certs:/etc/mtls:ro
     networks:
       - app-net
       - svc-net

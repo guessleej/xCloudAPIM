@@ -3,20 +3,54 @@
  * 每個 upstream service 一個 Pool，共享 keep-alive 連線
  */
 import { Pool, type Dispatcher } from 'undici'
+import { readFileSync } from 'node:fs'
 import { config } from '../config/index.js'
 import type { Logger } from 'pino'
+
+// ─── 服務間 mTLS（P3-3b）──────────────────────────────────────
+// MTLS_ENABLED=true 時，對已知內部服務改連 https://host:9443 並帶 client 憑證。
+const MTLS_ENABLED = (process.env['MTLS_ENABLED'] ?? '').toLowerCase() === 'true'
+const CERT_DIR = process.env['MTLS_CERT_DIR'] ?? '/etc/mtls'
+const MTLS_PORT = process.env['MTLS_PORT'] ?? '9443'
+const INTERNAL_HOSTS = new Set([
+  'auth-service', 'registry-service', 'subscription-service', 'policy-engine', 'gateway', 'bff',
+])
+
+let tlsConnect: { cert: Buffer; key: Buffer; ca: Buffer } | undefined
+if (MTLS_ENABLED) {
+  tlsConnect = {
+    cert: readFileSync(`${CERT_DIR}/service.crt`),
+    key:  readFileSync(`${CERT_DIR}/service.key`),
+    ca:   readFileSync(`${CERT_DIR}/ca.crt`),
+  }
+}
+
+function mtlsBase(baseUrl: string): string {
+  if (!MTLS_ENABLED) return baseUrl
+  try {
+    const u = new URL(baseUrl)
+    if (!INTERNAL_HOSTS.has(u.hostname)) return baseUrl
+    u.protocol = 'https:'
+    u.port = MTLS_PORT
+    return u.origin
+  } catch {
+    return baseUrl
+  }
+}
 
 const pools = new Map<string, Pool>()
 
 function getPool(baseUrl: string): Pool {
-  let pool = pools.get(baseUrl)
+  const target = mtlsBase(baseUrl)
+  let pool = pools.get(target)
   if (!pool) {
-    pool = new Pool(baseUrl, {
+    pool = new Pool(target, {
       connections:        16,
       keepAliveTimeout:   60_000,
       keepAliveMaxTimeout: 120_000,
+      ...(tlsConnect && target.startsWith('https:') ? { connect: tlsConnect } : {}),
     })
-    pools.set(baseUrl, pool)
+    pools.set(target, pool)
   }
   return pool
 }
