@@ -129,6 +129,7 @@ USER 10001:10001                 # non-root
 | **P2-B-2** ✅ | **Vault 動態憑證（DB secrets engine 動態簽發 postgres 帳密；4 服務背景續租/輪轉）** | 中高（已上線驗證；fallback 開關 VAULT_DB_CREDS） |
 | **P3-1** ✅ | **不可變稽核日誌**（postgres append-only + 觸發器禁改 + hash chain + audit-sink consumer） | 中（已上線驗證；稽核 topics 待服務端產生事件） |
 | **P3-2** ✅ | **自動金鑰輪轉**（Vault KV 版本化 JWT 金鑰，背景輪轉，JWKS 新舊重疊零停機；DB 憑證已於 P2-B-2 動態輪轉） | 中（已上線驗證；JWT_AUTO_ROTATE 開關） |
-| **P3-3** ⬜ | 服務間 mTLS（應用層）— 最高風險，建議專門排期 | 高 |
+| **P3-3a** ✅ | 服務間 mTLS — Go 後端 server 端（auth/registry/subscription/policy-engine 於 :9443 強制 mTLS，dual-listener 與 plain port 並存） | 高（已驗證；client 端尚未切換故未端到端強制） |
+| **P3-3b** ⬜ | mTLS client 端遷移（gateway/bff 改用 :9443）+ Node servers + nginx upstream | 高 |
 
 > 本次（P0）聚焦「不改變執行架構」的安全內建；P1–P3 以 issue 追蹤、分批驗證上線，避免破壞既有運行系統。
