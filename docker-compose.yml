@@ -1002,6 +1002,8 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-gateway
     environment:
+      MTLS_ENABLED:             ${MTLS_ENABLED:-false}
+      MTLS_PORT:                "9443"
       NODE_ENV:                   ${NODE_ENV:-production}
       PORT:                       8080
       REDIS_HOST:                 redis-master-1
@@ -1044,6 +1046,8 @@ services:
         reservations:
           cpus: '0.25'
           memory: 256M
+    volumes:
+      - ./infra/mtls/certs:/etc/mtls:ro
     networks:
       - app-net
       - svc-net
