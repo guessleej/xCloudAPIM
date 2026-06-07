@@ -42,6 +42,8 @@ jobs:
           JWT_SECRET: ci_jwt_secret_min_32_chars_xxxxxxxx
           KAFKA_SASL_PASSWORD: ci
           KAFKA_SSL_PASSWORD: ci
+          INFLUXDB_K6_PASSWORD: ci
+          INFLUXDB_K6_ADMIN_TOKEN: ci_influx_token
         run: |
           docker compose -f docker-compose.yml config -q
           echo "✅ docker-compose.yml is valid"
