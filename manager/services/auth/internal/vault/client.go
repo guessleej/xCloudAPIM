@@ -1,11 +1,15 @@
 package vault
 
 import (
+	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
@@ -116,6 +120,11 @@ func (c *Client) fetchAndCacheKeys() (*JWTKeyPair, error) {
 		return nil, fmt.Errorf("parse RSA private key: %w", err)
 	}
 
+	// kid 未提供時以公鑰 RFC 7638 指紋為 kid（金鑰輪轉時可辨識新舊金鑰）
+	if keyID == "" {
+		keyID = thumbprint(&privKey.PublicKey)
+	}
+
 	c.privateKey = privKey
 	c.publicKey = &privKey.PublicKey
 	c.keyID = keyID
@@ -139,6 +148,98 @@ func (c *Client) InvalidateCache() {
 	c.publicKey = nil
 	c.cachedAt = time.Time{}
 	c.logger.Info("JWT key cache invalidated")
+}
+
+// thumbprint 回傳公鑰的 RFC 7638 JWK 指紋（作為 kid）。
+func thumbprint(pub *rsa.PublicKey) string {
+	n := base64.RawURLEncoding.EncodeToString(pub.N.Bytes())
+	e := base64.RawURLEncoding.EncodeToString(big.NewInt(int64(pub.E)).Bytes())
+	canonical := `{"e":"` + e + `","kty":"RSA","n":"` + n + `"}`
+	h := sha256.Sum256([]byte(canonical))
+	return base64.RawURLEncoding.EncodeToString(h[:])
+}
+
+// GetJWKSKeys 回傳 JWKS 應公開的公鑰：當前版本 + 前一版本（金鑰輪轉重疊窗，
+// 讓輪轉前簽發、仍未過期的 token 仍可驗證）。
+func (c *Client) GetJWKSKeys() ([]JWTKeyPair, error) {
+	cur, err := c.GetJWTKeyPair()
+	if err != nil {
+		return nil, err
+	}
+	keys := []JWTKeyPair{*cur}
+	if prev, perr := c.readPrevVersionPub(); perr == nil && prev != nil && prev.KeyID != cur.KeyID {
+		keys = append(keys, *prev)
+	}
+	return keys, nil
+}
+
+// readPrevVersionPub 讀取 KV v2 前一版本的公鑰（best-effort，無前版時回 nil）。
+func (c *Client) readPrevVersionPub() (*JWTKeyPair, error) {
+	latest, err := c.vc.Logical().Read(c.jwtSecretPath)
+	if err != nil || latest == nil {
+		return nil, err
+	}
+	md, _ := latest.Data["metadata"].(map[string]interface{})
+	if md == nil {
+		return nil, nil
+	}
+	verNum, _ := md["version"].(json.Number)
+	cur, _ := verNum.Int64()
+	if cur <= 1 {
+		return nil, nil
+	}
+	sec, err := c.vc.Logical().ReadWithData(c.jwtSecretPath, map[string][]string{"version": {fmt.Sprint(cur - 1)}})
+	if err != nil || sec == nil {
+		return nil, err
+	}
+	data, ok := sec.Data["data"].(map[string]interface{})
+	if !ok {
+		return nil, nil
+	}
+	pubB64, _ := data["public_key_pem"].(string)
+	if pubB64 == "" {
+		return nil, nil
+	}
+	pubPEM, err := base64.StdEncoding.DecodeString(pubB64)
+	if err != nil {
+		return nil, err
+	}
+	pub, err := parseRSAPublicKey(pubPEM)
+	if err != nil {
+		return nil, err
+	}
+	return &JWTKeyPair{PublicKey: pub, KeyID: thumbprint(pub), Algorithm: "RS256"}, nil
+}
+
+// RotateJWTKey 產生新的 RSA 金鑰對並寫入 Vault（KV v2 新版本），然後清快取。
+// 供自動輪轉（背景排程）或手動觸發使用；前一版本仍保留供 JWKS 重疊驗證。
+func (c *Client) RotateJWTKey() error {
+	newKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return fmt.Errorf("generate rsa key: %w", err)
+	}
+	privDER, err := x509.MarshalPKCS8PrivateKey(newKey)
+	if err != nil {
+		return fmt.Errorf("marshal priv: %w", err)
+	}
+	privPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privDER})
+	pubDER, err := x509.MarshalPKIXPublicKey(&newKey.PublicKey)
+	if err != nil {
+		return fmt.Errorf("marshal pub: %w", err)
+	}
+	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubDER})
+	_, err = c.vc.Logical().Write(c.jwtSecretPath, map[string]interface{}{
+		"data": map[string]interface{}{
+			"private_key_pem": base64.StdEncoding.EncodeToString(privPEM),
+			"public_key_pem":  base64.StdEncoding.EncodeToString(pubPEM),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("write rotated key to vault: %w", err)
+	}
+	c.InvalidateCache()
+	c.logger.Info("JWT signing key rotated (new Vault KV version written)")
+	return nil
 }
 
 // GetSecret 取得任意 KV v2 Secret
@@ -194,4 +295,20 @@ func parseRSAPrivateKey(pemBytes []byte) (*rsa.PrivateKey, error) {
 	default:
 		return nil, fmt.Errorf("unsupported PEM block type: %s", block.Type)
 	}
+}
+
+func parseRSAPublicKey(pemBytes []byte) (*rsa.PublicKey, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil {
+		return nil, fmt.Errorf("failed to decode public PEM block")
+	}
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	rsaPub, ok := key.(*rsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("not an RSA public key")
+	}
+	return rsaPub, nil
 }

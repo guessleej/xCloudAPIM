@@ -1179,6 +1179,8 @@ services:
       VAULT_ADDR:         http://vault:8200
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
+      JWT_AUTO_ROTATE:        ${JWT_AUTO_ROTATE:-false}
+      JWT_ROTATION_INTERVAL:  ${JWT_ROTATION_INTERVAL:-168h}
       SMTP_HOST:          mailhog
       SMTP_PORT:          1025
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318

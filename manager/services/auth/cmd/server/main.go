@@ -47,6 +47,28 @@ func main() {
 		logger.Fatal("vault not ready", zap.Error(err))
 	}
 
+	// ─── 自動 JWT 金鑰輪轉（P3-2，預設關閉）──────────────────────
+	// 產生新金鑰寫入 Vault 新版本；JWKS 同時公開新舊金鑰（重疊窗），輪轉前簽發的
+	// token 仍可驗證至到期。由 JWT_AUTO_ROTATE=true 啟用。
+	if os.Getenv("JWT_AUTO_ROTATE") == "true" {
+		interval := 168 * time.Hour
+		if v := os.Getenv("JWT_ROTATION_INTERVAL"); v != "" {
+			if d, derr := time.ParseDuration(v); derr == nil {
+				interval = d
+			}
+		}
+		go func() {
+			t := time.NewTicker(interval)
+			defer t.Stop()
+			for range t.C {
+				if rerr := vaultCli.RotateJWTKey(); rerr != nil {
+					logger.Error("JWT auto-rotation failed", zap.Error(rerr))
+				}
+			}
+		}()
+		logger.Info("JWT auto-rotation enabled", zap.Duration("interval", interval))
+	}
+
 	// ─── Redis Cache ──────────────────────────────────────────
 	redisCache, err := cache.NewRedisCache(
 		cfg.Redis.Addr,

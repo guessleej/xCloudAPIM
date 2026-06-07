@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"crypto/rand"
-	"crypto/rsa"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -197,13 +196,14 @@ func (s *TokenService) RevokeToken(ctx context.Context, tokenRaw string, client 
 	return s.redisCache.RevokeToken(ctx, hash, ttl)
 }
 
-// GetJWKS 回傳公鑰的 JWKS 格式（供 Gateway 驗證用）
+// GetJWKS 回傳公鑰的 JWKS 格式（供 Gateway 驗證用）。
+// 金鑰輪轉期間同時回傳當前 + 前一版本公鑰，使輪轉前簽發的 token 仍可驗證。
 func (s *TokenService) GetJWKS(ctx context.Context) (*domain.JWKS, error) {
-	keyPair, err := s.vaultCli.GetJWTKeyPair()
+	keys, err := s.vaultCli.GetJWKSKeys()
 	if err != nil {
-		return nil, fmt.Errorf("get JWT key pair: %w", err)
+		return nil, fmt.Errorf("get JWKS keys: %w", err)
 	}
-	return buildJWKS(keyPair.PublicKey, keyPair.KeyID), nil
+	return buildJWKS(keys), nil
 }
 
 // ─── Private ─────────────────────────────────────────────────
@@ -275,19 +275,20 @@ func generateOpaqueToken() (raw, hash string, err error) {
 	return
 }
 
-func buildJWKS(pub *rsa.PublicKey, kid string) *domain.JWKS {
-	n := base64.RawURLEncoding.EncodeToString(pub.N.Bytes())
-	e := base64.RawURLEncoding.EncodeToString(
-		big.NewInt(int64(pub.E)).Bytes(),
-	)
-	return &domain.JWKS{
-		Keys: []domain.JWK{{
+func buildJWKS(keys []vault.JWTKeyPair) *domain.JWKS {
+	jwks := &domain.JWKS{Keys: make([]domain.JWK, 0, len(keys))}
+	for _, k := range keys {
+		if k.PublicKey == nil {
+			continue
+		}
+		jwks.Keys = append(jwks.Keys, domain.JWK{
 			KeyType:   "RSA",
 			Use:       "sig",
-			KeyID:     kid,
+			KeyID:     k.KeyID,
 			Algorithm: "RS256",
-			N:         n,
-			E:         e,
-		}},
+			N:         base64.RawURLEncoding.EncodeToString(k.PublicKey.N.Bytes()),
+			E:         base64.RawURLEncoding.EncodeToString(big.NewInt(int64(k.PublicKey.E)).Bytes()),
+		})
 	}
+	return jwks
 }
