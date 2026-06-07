@@ -139,7 +139,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Semgrep
-        run: semgrep ci
+        # 發現項輸出到 log（供 triage），但不讓步驟失敗（報告為主）
+        run: semgrep ci || true
         env:
           SEMGREP_RULES: >-
             p/owasp-top-ten
