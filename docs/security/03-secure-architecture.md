@@ -128,7 +128,7 @@ USER 10001:10001                 # non-root
 | **P2-B-1** ✅ | **網路多網段分區（edge/app/svc/data，svc+data internal，全參數化可依環境設定）** | 高（已一次性重建驗證；data 層隔離已實證） |
 | **P2-B-2** ✅ | **Vault 動態憑證（DB secrets engine 動態簽發 postgres 帳密；4 服務背景續租/輪轉）** | 中高（已上線驗證；fallback 開關 VAULT_DB_CREDS） |
 | **P3-1** ✅ | **不可變稽核日誌**（postgres append-only + 觸發器禁改 + hash chain + audit-sink consumer） | 中（已上線驗證；稽核 topics 待服務端產生事件） |
-| **P3-2** ⬜ | 自動金鑰輪轉（Vault JWT key rotation） | 中 |
-| **P3-3** ⬜ | 服務間 mTLS（應用層） | 高 |
+| **P3-2** ✅ | **自動金鑰輪轉**（Vault KV 版本化 JWT 金鑰，背景輪轉，JWKS 新舊重疊零停機；DB 憑證已於 P2-B-2 動態輪轉） | 中（已上線驗證；JWT_AUTO_ROTATE 開關） |
+| **P3-3** ⬜ | 服務間 mTLS（應用層）— 最高風險，建議專門排期 | 高 |
 
 > 本次（P0）聚焦「不改變執行架構」的安全內建；P1–P3 以 issue 追蹤、分批驗證上線，避免破壞既有運行系統。
