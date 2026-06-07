@@ -59,3 +59,4 @@ infra/kafka/secrets/
 .tool-versions
 mise.toml
 infra/mtls/certs/
+backups/

@@ -44,8 +44,9 @@ services:
 
 | 連線 | 現況 | 目標（生產） |
 |------|------|------------|
-| Internet → nginx | HTTP（開發） | **TLS 1.2+（強制 HTTPS 轉址）** |
-| nginx → 應用服務 | HTTP | TLS 或維持內網 + mTLS |
+| Internet → nginx | ✅ **TLS 1.2/1.3 + HSTS + 80→443 強制轉址（已上線）** | 生產換正式 CA 憑證 |
+| nginx → gateway/bff | ✅ **mTLS（proxy_ssl client 憑證，:9443，已上線）** | 同（生產換正式 CA） |
+| gateway/bff → 後端服務 | ✅ **mTLS（內部 CA 雙向驗證，:9443，已上線）** | 同 |
 | 服務 → postgres | ✅ **`sslmode=require`（TLSv1.3，P2-A 已上線）** | `sslmode=verify-full`（生產換正式 CA） |
 | 服務 → redis | ✅ **TLS + requirepass（cluster bus 亦 TLS，P2-A 已上線）** | 同（生產換正式 CA） |
 | 服務 → mongodb | ✅ **TLS（allowTLS，P2-A 已上線；app client tls=true）** | requireTLS（生產換正式 CA） |

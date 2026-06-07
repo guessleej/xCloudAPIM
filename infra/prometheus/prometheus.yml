@@ -10,6 +10,7 @@ rule_files:
   - "rules/gateway.yml"
   - "rules/services.yml"
   - "rules/sla.yml"
+  - "rules/security.yml"
 
 alerting:
   alertmanagers:

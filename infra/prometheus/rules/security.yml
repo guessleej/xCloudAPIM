@@ -1,0 +1,68 @@
+groups:
+  - name: security.alerts
+    interval: 30s
+    rules:
+
+      # ── 異常錯誤率（可能攻擊 / 服務異常）─────────────────────
+      - alert: GatewayHigh5xxRate
+        expr: sum(rate(gateway_requests_total{status=~"5.."}[5m])) / clamp_min(sum(rate(gateway_requests_total[5m])), 1) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          team:     security
+        annotations:
+          summary:     "Gateway 5xx 比率 > 5%"
+          description: "過去 5 分鐘 gateway 5xx 比率偏高，可能為攻擊或上游異常。"
+
+      # ── 認證失敗激增（憑證填充 / 暴力破解）───────────────────
+      - alert: GatewayAuthFailureSpike
+        expr: sum(rate(gateway_requests_total{status=~"40[13]"}[5m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+          team:     security
+        annotations:
+          summary:     "401/403 激增（疑似憑證填充 / 未授權存取嘗試）"
+          description: "過去 5 分鐘 401/403 速率 > 20/s。"
+
+      # ── Rate-limit 觸發激增（疑似 DoS / 濫用）────────────────
+      - alert: GatewayRateLimitSpike
+        expr: sum(rate(gateway_requests_total{status="429"}[5m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+          team:     security
+        annotations:
+          summary:     "429 激增（rate-limit 大量觸發，疑似濫用 / DoS）"
+          description: "過去 5 分鐘 429 速率 > 20/s。"
+
+      # ── 關鍵安全元件離線 ─────────────────────────────────────
+      - alert: AuthServiceDown
+        expr: up{job="auth-service"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team:     security
+        annotations:
+          summary:     "auth-service 離線（認證 / 授權不可用）"
+          description: "{{ $labels.instance }} 已離線 > 2 分鐘。"
+
+      - alert: PostgresDown
+        expr: up{job="postgres"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team:     security
+        annotations:
+          summary:     "PostgreSQL exporter 離線"
+          description: "{{ $labels.instance }} 已離線 > 2 分鐘。"
+
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          team:     security
+        annotations:
+          summary:     "Redis exporter 離線"
+          description: "{{ $labels.instance }} 已離線 > 2 分鐘。"
