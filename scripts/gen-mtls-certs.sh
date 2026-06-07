@@ -13,7 +13,7 @@ mkdir -p "$CERT_DIR"
 
 SANS="DNS:localhost,DNS:auth-service,DNS:registry-service,DNS:subscription-service,DNS:policy-engine,DNS:gateway,DNS:bff,DNS:portal,DNS:studio,DNS:nginx,DNS:analytics-service,DNS:notification-service,DNS:audit-sink,IP:127.0.0.1"
 
-docker run --rm -v "$PWD/$CERT_DIR:/c" alpine/openssl sh -c "
+docker run --rm --entrypoint sh -v "$PWD/$CERT_DIR:/c" alpine/openssl -c "
 set -e
 cd /c
 # 1) 內部 CA
