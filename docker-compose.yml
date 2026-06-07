@@ -813,6 +813,58 @@ services:
     logging: *default-logging
 
   # ─────────────────────────────────────────────────────────────
+  # Audit Sink（不可變稽核日誌 consumer，P3）
+  # ─────────────────────────────────────────────────────────────
+  audit-sink:
+    build:
+      context: ./manager/services/audit-sink
+      dockerfile: Dockerfile
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        GIT_COMMIT: ${GIT_COMMIT:-}
+    image: xcloudapim/audit-sink:${IMAGE_TAG:-latest}
+    <<: [*always-restart, *hardened]
+    container_name: apim-audit-sink
+    environment:
+      NODE_ENV:            ${NODE_ENV:-production}
+      PORT:                8087
+      KAFKA_BROKERS:       kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
+      KAFKA_GROUP_ID:      audit-sink
+      KAFKA_CLIENT_ID:     audit-sink
+      AUDIT_TOPICS:        auth.events,policy.published,subscription.events
+      POSTGRES_HOST:       postgres
+      POSTGRES_PORT:       5432
+      POSTGRES_USER:       ${POSTGRES_USER:-apim_user}
+      POSTGRES_PASSWORD:   ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB:         ${POSTGRES_DB:-apim}
+      POSTGRES_SSL_MODE:   require
+      OTEL_SERVICE_NAME:   audit-sink
+    depends_on:
+      kafka:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://localhost:8087/healthz"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - svc-net
+      - data-net
+    logging: *default-logging
+
+  # ─────────────────────────────────────────────────────────────
   # Notification Service（Node.js 20 + Fastify + Kafka Consumer）
   # ─────────────────────────────────────────────────────────────
   notification-service:
