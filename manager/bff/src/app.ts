@@ -1,3 +1,5 @@
+import https from 'node:https'
+import { readFileSync } from 'node:fs'
 import { pino } from 'pino'
 import { buildServer } from './server.js'
 import { config } from './config/index.js'
@@ -30,6 +32,21 @@ async function main(): Promise<void> {
       'BFF GraphQL server started',
     )
   })
+
+  // ─── mTLS dual-listener（P3-3b-3；plain port 保留供 healthcheck/過渡）──
+  if ((process.env['MTLS_ENABLED'] ?? '').toLowerCase() === 'true') {
+    const dir = process.env['MTLS_CERT_DIR'] ?? '/etc/mtls'
+    const mport = Number(process.env['MTLS_PORT'] ?? '9443')
+    const handler = server.listeners('request')[0] as (req: unknown, res: unknown) => void
+    const mtlsServer = https.createServer({
+      key:  readFileSync(`${dir}/service.key`),
+      cert: readFileSync(`${dir}/service.crt`),
+      ca:   readFileSync(`${dir}/ca.crt`),
+      requestCert: true,
+      rejectUnauthorized: true,
+    }, handler)
+    mtlsServer.listen(mport, '0.0.0.0', () => log.info({ port: mport }, 'BFF mTLS listener started'))
+  }
 }
 
 void main()
