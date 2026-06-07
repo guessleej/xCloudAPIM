@@ -131,7 +131,7 @@ USER 10001:10001                 # non-root
 | **P3-2** ✅ | **自動金鑰輪轉**（Vault KV 版本化 JWT 金鑰，背景輪轉，JWKS 新舊重疊零停機；DB 憑證已於 P2-B-2 動態輪轉） | 中（已上線驗證；JWT_AUTO_ROTATE 開關） |
 | **P3-3a** ✅ | 服務間 mTLS — Go 後端 server 端（auth/registry/subscription/policy-engine 於 :9443 強制 mTLS，dual-listener 與 plain port 並存） | 高（已驗證；client 端尚未切換故未端到端強制） |
 | **P3-3b-1** ✅ | mTLS client — **gateway** 對 registry/policy-engine/subscription/auth 內部呼叫走 :9443（內部 host 白名單轉址 + client 憑證；JWKS/外部端點除外）。已捕捉 gateway→registry:9443 連線實證 | 高（已驗證；MTLS_ENABLED 開關） |
-| **P3-3b-2** ⬜ | mTLS client — **bff** 內部呼叫 | 高 |
-| **P3-3b-3** ⬜ | Node mTLS servers（gateway/bff/portal/studio）+ nginx upstream mTLS | 高 |
+| **P3-3b-2** ✅ | mTLS client — **bff** 內部呼叫（ServiceClient 單一 chokepoint：undici Pool connect 帶 client 憑證走 :9443）。已驗證帶憑證握手成功、不帶被拒 | 高（已驗證；MTLS_ENABLED 開關） |
+| **P3-3b-3** ⬜ | Node mTLS servers（gateway/bff）+ nginx upstream mTLS（portal/studio UI 層另計） | 高 |
 
 > 本次（P0）聚焦「不改變執行架構」的安全內建；P1–P3 以 issue 追蹤、分批驗證上線，避免破壞既有運行系統。
