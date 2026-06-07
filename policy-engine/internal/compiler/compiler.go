@@ -13,9 +13,9 @@ import (
 
 // PolicyDSL Policy 鏈的宣告式定義（YAML / JSON 格式）
 type PolicyDSL struct {
-	ChainID string       `yaml:"chain_id" json:"chain_id"`
-	APIID   string       `yaml:"api_id"   json:"api_id"`
-	Version int64        `yaml:"version"  json:"version"`
+	ChainID  string      `yaml:"chain_id" json:"chain_id"`
+	APIID    string      `yaml:"api_id"   json:"api_id"`
+	Version  int64       `yaml:"version"  json:"version"`
 	Policies []PolicyDef `yaml:"policies" json:"policies"`
 }
 

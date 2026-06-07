@@ -354,7 +354,6 @@ func (r *APIRepository) UpsertGatewayRoute(ctx context.Context, route *domain.Ga
 
 // ─── internal helpers ─────────────────────────────────────────
 
-
 func (r *APIRepository) scanAPI(ctx context.Context, q string, args ...interface{}) (*domain.API, error) {
 	row := r.db.QueryRowxContext(ctx, q, args...)
 	api, err := scanAPIRow(row)
@@ -369,7 +368,7 @@ func (r *APIRepository) scanAPI(ctx context.Context, q string, args ...interface
 
 func scanAPIRow(row interface{ Scan(...interface{}) error }) (*domain.API, error) {
 	var a domain.API
-	var tags    pq.StringArray
+	var tags pq.StringArray
 	var metaStr string
 	err := row.Scan(
 		&a.ID, &a.OrganizationID, &a.Name, &a.Slug, &a.Description,

@@ -19,8 +19,8 @@ func NewAPIKeyHandler(svc *service.APIKeyService) *APIKeyHandler {
 
 // POST /v1/subscriptions/:id/keys
 func (h *APIKeyHandler) Create(c *gin.Context) {
-	subID  := c.Param("id")
-	orgID  := c.GetHeader("X-Org-ID")
+	subID := c.Param("id")
+	orgID := c.GetHeader("X-Org-ID")
 	userID := c.GetHeader("X-User-ID")
 	if orgID == "" || userID == "" {
 		c.JSON(http.StatusBadRequest, errMsg("X-Org-ID and X-User-ID headers required"))

@@ -14,11 +14,12 @@ import (
 
 // CachePlugin Redis 回應快取
 // config keys:
-//   ttl        = "300"           (秒，預設 60)
-//   key_by     = "path"          (path | path_method | path_method_client)
-//   vary_headers = "Accept,Accept-Language"
-//   bypass_if  = "no-cache"      (若請求含 Cache-Control: no-cache 則略過)
-//   cacheable_methods = "GET,HEAD" (預設 GET,HEAD)
+//
+//	ttl        = "300"           (秒，預設 60)
+//	key_by     = "path"          (path | path_method | path_method_client)
+//	vary_headers = "Accept,Accept-Language"
+//	bypass_if  = "no-cache"      (若請求含 Cache-Control: no-cache 則略過)
+//	cacheable_methods = "GET,HEAD" (預設 GET,HEAD)
 type CachePlugin struct {
 	rdb *redis.Client
 }

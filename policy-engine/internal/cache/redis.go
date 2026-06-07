@@ -21,7 +21,7 @@ func redisTLSConfig() *tls.Config {
 }
 
 const (
-	KeyPolicyChain   = "policy:chain:%s"       // api_id
+	KeyPolicyChain    = "policy:chain:%s" // api_id
 	CacheInvalidateCh = "policy:invalidate"
 )
 

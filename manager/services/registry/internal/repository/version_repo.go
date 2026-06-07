@@ -133,31 +133,38 @@ func (r *VersionRepository) Update(ctx context.Context, id uuid.UUID, req *domai
 
 	if req.BackendProtocol != nil {
 		sets = append(sets, fmt.Sprintf("backend_protocol = $%d::backend_protocol", idx))
-		args = append(args, *req.BackendProtocol); idx++
+		args = append(args, *req.BackendProtocol)
+		idx++
 	}
 	if req.UpstreamURL != nil {
 		sets = append(sets, fmt.Sprintf("upstream_url = $%d", idx))
-		args = append(args, *req.UpstreamURL); idx++
+		args = append(args, *req.UpstreamURL)
+		idx++
 	}
 	if req.StripPrefix != nil {
 		sets = append(sets, fmt.Sprintf("strip_prefix = $%d", idx))
-		args = append(args, *req.StripPrefix); idx++
+		args = append(args, *req.StripPrefix)
+		idx++
 	}
 	if req.BasePath != nil {
 		sets = append(sets, fmt.Sprintf("base_path = $%d", idx))
-		args = append(args, *req.BasePath); idx++
+		args = append(args, *req.BasePath)
+		idx++
 	}
 	if req.TimeoutMS != nil {
 		sets = append(sets, fmt.Sprintf("timeout_ms = $%d", idx))
-		args = append(args, *req.TimeoutMS); idx++
+		args = append(args, *req.TimeoutMS)
+		idx++
 	}
 	if req.RetryCount != nil {
 		sets = append(sets, fmt.Sprintf("retry_count = $%d", idx))
-		args = append(args, *req.RetryCount); idx++
+		args = append(args, *req.RetryCount)
+		idx++
 	}
 	if req.Changelog != nil {
 		sets = append(sets, fmt.Sprintf("changelog = $%d", idx))
-		args = append(args, *req.Changelog); idx++
+		args = append(args, *req.Changelog)
+		idx++
 	}
 
 	args = append(args, id)

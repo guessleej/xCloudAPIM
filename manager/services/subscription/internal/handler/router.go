@@ -13,13 +13,13 @@ import (
 )
 
 func NewRouter(
-	subH    *SubscriptionHandler,
-	keyH    *APIKeyHandler,
-	quotaH  *QuotaHandler,
-	log     *zap.Logger,
-	env     string,
-	db      *sqlx.DB,
-	rdb     *redis.Client,
+	subH *SubscriptionHandler,
+	keyH *APIKeyHandler,
+	quotaH *QuotaHandler,
+	log *zap.Logger,
+	env string,
+	db *sqlx.DB,
+	rdb *redis.Client,
 ) *gin.Engine {
 	if env == "production" {
 		gin.SetMode(gin.ReleaseMode)
@@ -54,33 +54,33 @@ func NewRouter(
 
 	// ─── Public: Plans ────────────────────────────────────────
 	v1 := r.Group("/v1")
-	v1.GET("/plans",     subH.ListPlans)
+	v1.GET("/plans", subH.ListPlans)
 	v1.GET("/plans/:id", subH.GetPlan)
 
 	// ─── Subscriptions（需要有效 X-Org-ID + X-User-ID）─────────
 	subs := v1.Group("/subscriptions", requireIdentityHeaders())
-	subs.POST("",              subH.Create)
-	subs.GET("",               subH.List)
-	subs.GET("/:id",           subH.Get)
-	subs.PUT("/:id/approve",   subH.Approve)
-	subs.PUT("/:id/suspend",   subH.Suspend)
-	subs.PUT("/:id/cancel",    subH.Cancel)
-	subs.PUT("/:id/plan",      subH.ChangePlan)
+	subs.POST("", subH.Create)
+	subs.GET("", subH.List)
+	subs.GET("/:id", subH.Get)
+	subs.PUT("/:id/approve", subH.Approve)
+	subs.PUT("/:id/suspend", subH.Suspend)
+	subs.PUT("/:id/cancel", subH.Cancel)
+	subs.PUT("/:id/plan", subH.ChangePlan)
 
 	// ─── API Keys ─────────────────────────────────────────────
-	subs.POST("/:id/keys",          keyH.Create)
-	subs.GET("/:id/keys",           keyH.List)
+	subs.POST("/:id/keys", keyH.Create)
+	subs.GET("/:id/keys", keyH.List)
 	subs.DELETE("/:id/keys/:key_id", keyH.Revoke)
 
 	// ─── Usage / Quota ────────────────────────────────────────
-	subs.GET("/:id/quota",    quotaH.GetQuota)
-	subs.GET("/:id/usage",    quotaH.GetUsageHistory)
+	subs.GET("/:id/quota", quotaH.GetQuota)
+	subs.GET("/:id/usage", quotaH.GetUsageHistory)
 
 	// ─── Internal（Gateway 呼叫，需 X-Internal-Token）────────
 	internal := r.Group("/internal", middleware.InternalAuth())
-	internal.POST("/keys/verify",     keyH.Verify)
-	internal.POST("/usage/increment",  quotaH.Increment)
-	internal.GET("/quota/check",       quotaH.Check)
+	internal.POST("/keys/verify", keyH.Verify)
+	internal.POST("/usage/increment", quotaH.Increment)
+	internal.GET("/quota/check", quotaH.Check)
 
 	return r
 }

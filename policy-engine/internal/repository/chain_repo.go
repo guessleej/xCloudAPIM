@@ -20,16 +20,16 @@ import (
 // ManagementChain is the management-side view of a policy chain
 // (includes org/user metadata, unlike the read-side domain.PolicyChain).
 type ManagementChain struct {
-	ID             string    `json:"id"             db:"id"`
-	OrganizationID string    `json:"organization_id" db:"organization_id"`
-	APIID          *string   `json:"api_id,omitempty" db:"api_id"`
-	Name           string    `json:"name"           db:"name"`
-	Description    string    `json:"description"    db:"description"`
-	Status         string    `json:"status"         db:"status"`
-	Version        int       `json:"version"        db:"version"`
-	CreatedBy      string    `json:"created_by"     db:"created_by"`
-	CreatedAt      string    `json:"created_at"     db:"created_at"`
-	UpdatedAt      string    `json:"updated_at"     db:"updated_at"`
+	ID             string  `json:"id"             db:"id"`
+	OrganizationID string  `json:"organization_id" db:"organization_id"`
+	APIID          *string `json:"api_id,omitempty" db:"api_id"`
+	Name           string  `json:"name"           db:"name"`
+	Description    string  `json:"description"    db:"description"`
+	Status         string  `json:"status"         db:"status"`
+	Version        int     `json:"version"        db:"version"`
+	CreatedBy      string  `json:"created_by"     db:"created_by"`
+	CreatedAt      string  `json:"created_at"     db:"created_at"`
+	UpdatedAt      string  `json:"updated_at"     db:"updated_at"`
 	// Populated on get
 	Policies []domain.Policy `json:"policies,omitempty" db:"-"`
 }
@@ -307,15 +307,15 @@ func (r *ManagementRepo) DeletePolicy(ctx context.Context, policyID string) erro
 // ─── Helpers ─────────────────────────────────────────────────
 
 type policyRow struct {
-	ID          string   `db:"id"`
-	ChainID     string   `db:"chain_id"`
-	Type        string   `db:"type"`
-	Phase       string   `db:"phase"`
-	ExecOrder   int      `db:"exec_order"`
-	Name        string   `db:"name"`
-	Description string   `db:"description"`
-	Enabled     bool     `db:"enabled"`
-	Config      string   `db:"config"`
+	ID            string  `db:"id"`
+	ChainID       string  `db:"chain_id"`
+	Type          string  `db:"type"`
+	Phase         string  `db:"phase"`
+	ExecOrder     int     `db:"exec_order"`
+	Name          string  `db:"name"`
+	Description   string  `db:"description"`
+	Enabled       bool    `db:"enabled"`
+	Config        string  `db:"config"`
 	ConditionExpr *string `db:"condition_expr"`
 }
 

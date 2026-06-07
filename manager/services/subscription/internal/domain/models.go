@@ -7,25 +7,25 @@ import (
 // ─── Plan ─────────────────────────────────────────────────────
 
 type Plan struct {
-	ID             string          `db:"id"              json:"id"`
-	Name           string          `db:"name"            json:"name"`
-	DisplayName    string          `db:"display_name"    json:"display_name"`
-	Description    string          `db:"description"     json:"description"`
-	RPMLimit       int64           `db:"rpm_limit"       json:"rpm_limit"`
-	RPHLimit       *int64          `db:"rph_limit"       json:"rph_limit,omitempty"`
-	RPDLimit       int64           `db:"rpd_limit"       json:"rpd_limit"`
-	RPMMonth       *int64          `db:"rpm_limit_month" json:"rpm_limit_month,omitempty"`
-	BurstMult      float64         `db:"burst_multiplier" json:"burst_multiplier"`
-	Features       map[string]any  `db:"-"               json:"features"`
-	MaxAPIKeys     int             `db:"max_api_keys"    json:"max_api_keys"`
-	MaxApps        int             `db:"max_apps"        json:"max_apps"`
-	PriceCents     int             `db:"price_cents"     json:"price_cents"`
-	Currency       string          `db:"currency"        json:"currency"`
-	IsPublic       bool            `db:"is_public"       json:"is_public"`
-	IsActive       bool            `db:"is_active"       json:"is_active"`
-	SortOrder      int             `db:"sort_order"      json:"sort_order"`
-	CreatedAt      time.Time       `db:"created_at"      json:"created_at"`
-	UpdatedAt      time.Time       `db:"updated_at"      json:"updated_at"`
+	ID          string         `db:"id"              json:"id"`
+	Name        string         `db:"name"            json:"name"`
+	DisplayName string         `db:"display_name"    json:"display_name"`
+	Description string         `db:"description"     json:"description"`
+	RPMLimit    int64          `db:"rpm_limit"       json:"rpm_limit"`
+	RPHLimit    *int64         `db:"rph_limit"       json:"rph_limit,omitempty"`
+	RPDLimit    int64          `db:"rpd_limit"       json:"rpd_limit"`
+	RPMMonth    *int64         `db:"rpm_limit_month" json:"rpm_limit_month,omitempty"`
+	BurstMult   float64        `db:"burst_multiplier" json:"burst_multiplier"`
+	Features    map[string]any `db:"-"               json:"features"`
+	MaxAPIKeys  int            `db:"max_api_keys"    json:"max_api_keys"`
+	MaxApps     int            `db:"max_apps"        json:"max_apps"`
+	PriceCents  int            `db:"price_cents"     json:"price_cents"`
+	Currency    string         `db:"currency"        json:"currency"`
+	IsPublic    bool           `db:"is_public"       json:"is_public"`
+	IsActive    bool           `db:"is_active"       json:"is_active"`
+	SortOrder   int            `db:"sort_order"      json:"sort_order"`
+	CreatedAt   time.Time      `db:"created_at"      json:"created_at"`
+	UpdatedAt   time.Time      `db:"updated_at"      json:"updated_at"`
 }
 
 // ─── Subscription ─────────────────────────────────────────────
@@ -74,7 +74,7 @@ type APIKey struct {
 	ID             string       `db:"id"              json:"id"`
 	SubscriptionID string       `db:"subscription_id" json:"subscription_id"`
 	OrganizationID string       `db:"organization_id" json:"organization_id"`
-	KeyHash        string       `db:"key_hash"        json:"-"`     // 不回傳給前端
+	KeyHash        string       `db:"key_hash"        json:"-"` // 不回傳給前端
 	KeyPrefix      string       `db:"key_prefix"      json:"key_prefix"`
 	Name           string       `db:"name"            json:"name"`
 	Description    string       `db:"description"     json:"description"`
@@ -98,20 +98,20 @@ type APIKey struct {
 // ─── Quota ────────────────────────────────────────────────────
 
 type QuotaUsageDaily struct {
-	ID             string     `db:"id"`
-	SubscriptionID string     `db:"subscription_id"`
-	APIID          string     `db:"api_id"`
-	UsageDate      time.Time  `db:"usage_date"`
-	RequestCount   int64      `db:"request_count"`
-	SuccessCount   int64      `db:"success_count"`
-	ErrorCount     int64      `db:"error_count"`
-	TotalBytesIn   int64      `db:"total_bytes_in"`
-	TotalBytesOut  int64      `db:"total_bytes_out"`
-	AvgLatencyMs   *float64   `db:"avg_latency_ms"`
-	P95LatencyMs   *float64   `db:"p95_latency_ms"`
-	P99LatencyMs   *float64   `db:"p99_latency_ms"`
-	CreatedAt      time.Time  `db:"created_at"`
-	UpdatedAt      time.Time  `db:"updated_at"`
+	ID             string    `db:"id"`
+	SubscriptionID string    `db:"subscription_id"`
+	APIID          string    `db:"api_id"`
+	UsageDate      time.Time `db:"usage_date"`
+	RequestCount   int64     `db:"request_count"`
+	SuccessCount   int64     `db:"success_count"`
+	ErrorCount     int64     `db:"error_count"`
+	TotalBytesIn   int64     `db:"total_bytes_in"`
+	TotalBytesOut  int64     `db:"total_bytes_out"`
+	AvgLatencyMs   *float64  `db:"avg_latency_ms"`
+	P95LatencyMs   *float64  `db:"p95_latency_ms"`
+	P99LatencyMs   *float64  `db:"p99_latency_ms"`
+	CreatedAt      time.Time `db:"created_at"`
+	UpdatedAt      time.Time `db:"updated_at"`
 }
 
 type QuotaUsageMonthly struct {
@@ -150,15 +150,15 @@ type QuotaCheckResult struct {
 // ─── Subscription Audit Log ───────────────────────────────────
 
 type SubscriptionAuditLog struct {
-	ID             string     `db:"id"              json:"id"`
-	SubscriptionID string     `db:"subscription_id" json:"subscription_id"`
-	Action         string     `db:"action"          json:"action"`
-	OldValue       []byte     `db:"old_value"       json:"old_value,omitempty"`
-	NewValue       []byte     `db:"new_value"       json:"new_value,omitempty"`
-	PerformedBy    *string    `db:"performed_by"    json:"performed_by,omitempty"`
-	PerformedAt    time.Time  `db:"performed_at"    json:"performed_at"`
-	IPAddress      *string    `db:"ip_address"      json:"ip_address,omitempty"`
-	Reason         *string    `db:"reason"          json:"reason,omitempty"`
+	ID             string    `db:"id"              json:"id"`
+	SubscriptionID string    `db:"subscription_id" json:"subscription_id"`
+	Action         string    `db:"action"          json:"action"`
+	OldValue       []byte    `db:"old_value"       json:"old_value,omitempty"`
+	NewValue       []byte    `db:"new_value"       json:"new_value,omitempty"`
+	PerformedBy    *string   `db:"performed_by"    json:"performed_by,omitempty"`
+	PerformedAt    time.Time `db:"performed_at"    json:"performed_at"`
+	IPAddress      *string   `db:"ip_address"      json:"ip_address,omitempty"`
+	Reason         *string   `db:"reason"          json:"reason,omitempty"`
 }
 
 // ─── Request/Response DTOs ────────────────────────────────────

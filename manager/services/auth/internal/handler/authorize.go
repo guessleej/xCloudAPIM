@@ -14,7 +14,8 @@ import (
 // Authorize GET /oauth2/authorize
 // Authorization Code Flow with PKCE
 // Query Params: response_type, client_id, redirect_uri, scope, state,
-//               code_challenge, code_challenge_method, nonce
+//
+//	code_challenge, code_challenge_method, nonce
 func (h *Handlers) Authorize(c *gin.Context) {
 	req := &domain.AuthorizeRequest{
 		ResponseType:        c.Query("response_type"),

@@ -71,7 +71,7 @@ func (p *Producer) PublishAPIEvent(ctx context.Context, topic string, event *dom
 		Value: payload,
 		Headers: []kafka.Header{
 			{Key: "event_type", Value: []byte(event.EventType)},
-			{Key: "source",     Value: []byte("registry-service")},
+			{Key: "source", Value: []byte("registry-service")},
 		},
 	}
 

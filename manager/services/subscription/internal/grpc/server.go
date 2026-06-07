@@ -43,10 +43,10 @@ type CheckQuotaRequest struct {
 // ─── Server ───────────────────────────────────────────────────
 
 type Server struct {
-	grpc         *googlegrpc.Server
-	quotaSvc     *service.QuotaService
-	log          *zap.Logger
-	port         int
+	grpc     *googlegrpc.Server
+	quotaSvc *service.QuotaService
+	log      *zap.Logger
+	port     int
 }
 
 func NewServer(quotaSvc *service.QuotaService, log *zap.Logger, port int) *Server {

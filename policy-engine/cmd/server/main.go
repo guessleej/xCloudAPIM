@@ -18,6 +18,7 @@ import (
 
 	"github.com/xcloudapim/policy-engine/internal/compiler"
 	"github.com/xcloudapim/policy-engine/internal/config"
+	"github.com/xcloudapim/policy-engine/internal/executor"
 	grpcserver "github.com/xcloudapim/policy-engine/internal/grpc"
 	"github.com/xcloudapim/policy-engine/internal/handler"
 	"github.com/xcloudapim/policy-engine/internal/mtls"
@@ -25,7 +26,6 @@ import (
 	"github.com/xcloudapim/policy-engine/internal/repository"
 	"github.com/xcloudapim/policy-engine/internal/service"
 	"github.com/xcloudapim/policy-engine/internal/store"
-	"github.com/xcloudapim/policy-engine/internal/executor"
 
 	_ "github.com/lib/pq"
 )

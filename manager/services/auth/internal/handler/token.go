@@ -103,7 +103,7 @@ func (h *Handlers) OpenIDConfig(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{
 		"issuer":                                base,
-		"authorization_endpoint":               base + "/oauth2/authorize",
+		"authorization_endpoint":                base + "/oauth2/authorize",
 		"token_endpoint":                        base + "/oauth2/token",
 		"jwks_uri":                              base + "/oauth2/jwks",
 		"revocation_endpoint":                   base + "/oauth2/revoke",

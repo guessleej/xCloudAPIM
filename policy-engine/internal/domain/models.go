@@ -45,11 +45,11 @@ var PhaseOrder = map[PolicyPhase]int{
 // PolicyChain is the runtime representation stored and consumed by the engine.
 // All IDs are plain strings (UUID format) for JSON serialisation simplicity.
 type PolicyChain struct {
-	ID       string      `json:"id"`
-	APIID    string      `json:"api_id"`
-	Version  int64       `json:"version"`
-	ETag     string      `json:"etag"`
-	Policies []*Policy   `json:"policies"`
+	ID       string    `json:"id"`
+	APIID    string    `json:"api_id"`
+	Version  int64     `json:"version"`
+	ETag     string    `json:"etag"`
+	Policies []*Policy `json:"policies"`
 }
 
 type Policy struct {
@@ -171,13 +171,13 @@ type CreatePolicyRequest struct {
 }
 
 type UpdatePolicyRequest struct {
-	Type      *PolicyType        `json:"type"`
-	Phase     *PolicyPhase       `json:"phase"`
-	Order     *int               `json:"order"`
-	Name      *string            `json:"name"`
-	Enabled   *bool              `json:"enabled"`
-	Config    map[string]string  `json:"config"`
-	Condition *string            `json:"condition"`
+	Type      *PolicyType       `json:"type"`
+	Phase     *PolicyPhase      `json:"phase"`
+	Order     *int              `json:"order"`
+	Name      *string           `json:"name"`
+	Enabled   *bool             `json:"enabled"`
+	Config    map[string]string `json:"config"`
+	Condition *string           `json:"condition"`
 }
 
 type InvalidateCacheRequest struct {

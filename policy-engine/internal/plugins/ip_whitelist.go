@@ -10,8 +10,9 @@ import (
 
 // IPWhitelistPlugin IP 白名單 / 黑名單
 // config keys:
-//   mode = "whitelist" | "blacklist"  (default: whitelist)
-//   ips  = "1.2.3.4,10.0.0.0/8,192.168.1.0/24"
+//
+//	mode = "whitelist" | "blacklist"  (default: whitelist)
+//	ips  = "1.2.3.4,10.0.0.0/8,192.168.1.0/24"
 type IPWhitelistPlugin struct{}
 
 func NewIPWhitelistPlugin() *IPWhitelistPlugin { return &IPWhitelistPlugin{} }
@@ -38,7 +39,7 @@ func (p *IPWhitelistPlugin) Validate(config map[string]string) []string {
 }
 
 func (p *IPWhitelistPlugin) Execute(ctx context.Context, execCtx *domain.ExecContext, config map[string]string) error {
-	mode   := cfgGetDefault(config, "mode", "whitelist")
+	mode := cfgGetDefault(config, "mode", "whitelist")
 	ipList := parseCSV(cfgGet(config, "ips"))
 
 	// 優先取 X-Forwarded-For（反向代理後面的真實 IP）

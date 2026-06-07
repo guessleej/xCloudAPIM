@@ -81,7 +81,7 @@ func (h *QuotaHandler) Increment(c *gin.Context) {
 // GET /internal/quota/check  (Gateway 請求前呼叫)
 func (h *QuotaHandler) Check(c *gin.Context) {
 	clientID := c.Query("client_id")
-	apiID    := c.Query("api_id")
+	apiID := c.Query("api_id")
 	if clientID == "" || apiID == "" {
 		c.JSON(http.StatusBadRequest, errMsg("client_id and api_id required"))
 		return

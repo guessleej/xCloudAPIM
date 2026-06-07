@@ -24,12 +24,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate compose files
+        env:
+          # 佔位環境變數驗證語法（不啟動服務）
+          POSTGRES_PASSWORD: ci
+          REDIS_PASSWORD: ci
+          SESSION_SECRET: ci_session_secret_min_32_chars_xx
+          INTERNAL_SERVICE_SECRET: ci
+          MGMT_ADMIN_PASSWORD: ci
+          VAULT_TOKEN: ci
+          MONGO_PASSWORD: ci
+          ELASTIC_PASSWORD: ci
+          GF_SECURITY_ADMIN_PASSWORD: ci
+          KIBANA_PASSWORD: ci
+          KIBANA_ENCRYPTION_KEY: ci_kibana_key_min_32_chars_xxxxxxx
+          PGADMIN_DEFAULT_EMAIL: ci@example.com
+          PGADMIN_DEFAULT_PASSWORD: ci
+          JWT_SECRET: ci_jwt_secret_min_32_chars_xxxxxxxx
+          KAFKA_SASL_PASSWORD: ci
+          KAFKA_SSL_PASSWORD: ci
         run: |
-          # 用佔位環境變數驗證語法（不啟動服務）
-          set -a
-          POSTGRES_PASSWORD=ci REDIS_PASSWORD=ci SESSION_SECRET=ci_session_secret_min_32_chars_xx \
-          INTERNAL_SERVICE_SECRET=ci MGMT_ADMIN_PASSWORD=ci VAULT_TOKEN=ci \
-          MONGO_PASSWORD=ci ELASTIC_PASSWORD=ci \
           docker compose -f docker-compose.yml config -q
           echo "✅ docker-compose.yml is valid"
 
@@ -114,7 +127,15 @@ jobs:
         run: npm run lint --if-present
       - name: Test
         working-directory: ${{ matrix.dir }}
-        run: npm test --if-present
+        run: |
+          # 直接以 find 找測試檔餵給 node --test（繞過 package.json 內 Node 20 不展開的 glob）
+          files=$(find tests test -name '*.test.mjs' -o -name '*.test.cjs' 2>/dev/null || true)
+          if [ -n "$files" ]; then
+            echo "▶ 執行測試：$files"
+            node --test $files
+          else
+            echo "ℹ️  無測試檔，略過"
+          fi
       - name: Build
         working-directory: ${{ matrix.dir }}
         run: npm run build --if-present

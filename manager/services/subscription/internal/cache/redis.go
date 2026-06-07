@@ -25,15 +25,15 @@ func (c *QuotaCache) SetKeyInfo(ctx context.Context, hash string, key *domain.AP
 	pipe := c.rdb.Pipeline()
 	k := keyInfoKey(hash)
 	pipe.HSet(ctx, k,
-		"key_id",   key.ID,
-		"sub_id",   sub.ID,
-		"api_id",   sub.APIID,
-		"org_id",   sub.OrganizationID,
-		"plan_id",  plan.ID,
+		"key_id", key.ID,
+		"sub_id", sub.ID,
+		"api_id", sub.APIID,
+		"org_id", sub.OrganizationID,
+		"plan_id", plan.ID,
 		"plan_name", plan.Name,
-		"rpm_limit",   fmt.Sprintf("%d", plan.RPMLimit),
-		"rpd_limit",   fmt.Sprintf("%d", plan.RPDLimit),
-		"status",   string(key.Status),
+		"rpm_limit", fmt.Sprintf("%d", plan.RPMLimit),
+		"rpd_limit", fmt.Sprintf("%d", plan.RPDLimit),
+		"status", string(key.Status),
 	)
 	pipe.Expire(ctx, k, 5*time.Minute)
 	_, err := pipe.Exec(ctx)

@@ -22,18 +22,18 @@ func newErr(status int, code, msg string) *ServiceError {
 
 // 預定義錯誤
 var (
-	ErrAPINotFound      = newErr(http.StatusNotFound, "API_NOT_FOUND", "API not found")
-	ErrVersionNotFound  = newErr(http.StatusNotFound, "VERSION_NOT_FOUND", "API version not found")
-	ErrRouteNotFound    = newErr(http.StatusNotFound, "ROUTE_NOT_FOUND", "Gateway route not found")
-	ErrSlugConflict     = newErr(http.StatusConflict, "SLUG_CONFLICT", "API slug already exists in this organization")
-	ErrVersionConflict  = newErr(http.StatusConflict, "VERSION_CONFLICT", "This version already exists for the API")
-	ErrSpecInvalid      = newErr(http.StatusBadRequest, "SPEC_INVALID", "OpenAPI spec is invalid")
-	ErrSpecParseFailed  = newErr(http.StatusBadRequest, "SPEC_PARSE_FAILED", "Failed to parse OpenAPI spec")
+	ErrAPINotFound           = newErr(http.StatusNotFound, "API_NOT_FOUND", "API not found")
+	ErrVersionNotFound       = newErr(http.StatusNotFound, "VERSION_NOT_FOUND", "API version not found")
+	ErrRouteNotFound         = newErr(http.StatusNotFound, "ROUTE_NOT_FOUND", "Gateway route not found")
+	ErrSlugConflict          = newErr(http.StatusConflict, "SLUG_CONFLICT", "API slug already exists in this organization")
+	ErrVersionConflict       = newErr(http.StatusConflict, "VERSION_CONFLICT", "This version already exists for the API")
+	ErrSpecInvalid           = newErr(http.StatusBadRequest, "SPEC_INVALID", "OpenAPI spec is invalid")
+	ErrSpecParseFailed       = newErr(http.StatusBadRequest, "SPEC_PARSE_FAILED", "Failed to parse OpenAPI spec")
 	ErrCannotDeletePublished = newErr(http.StatusBadRequest, "CANNOT_DELETE_PUBLISHED", "Cannot delete a published API; deprecate it first")
-	ErrVersionNotDraft  = newErr(http.StatusBadRequest, "VERSION_NOT_DRAFT", "Only draft versions can be published")
-	ErrNoActiveVersion  = newErr(http.StatusNotFound, "NO_ACTIVE_VERSION", "API has no active (published) version")
-	ErrUnauthorized     = newErr(http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required")
-	ErrForbidden        = newErr(http.StatusForbidden, "FORBIDDEN", "Access denied")
+	ErrVersionNotDraft       = newErr(http.StatusBadRequest, "VERSION_NOT_DRAFT", "Only draft versions can be published")
+	ErrNoActiveVersion       = newErr(http.StatusNotFound, "NO_ACTIVE_VERSION", "API has no active (published) version")
+	ErrUnauthorized          = newErr(http.StatusUnauthorized, "UNAUTHORIZED", "Authentication required")
+	ErrForbidden             = newErr(http.StatusForbidden, "FORBIDDEN", "Access denied")
 )
 
 func ErrInvalidInput(detail string) *ServiceError {

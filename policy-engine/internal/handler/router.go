@@ -34,14 +34,14 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 
 	// ─── Health / Metrics ─────────────────────────────────────
 	r.GET("/healthz", h.Health)
-	r.GET("/ready",   h.Ready)
+	r.GET("/ready", h.Ready)
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// ─── Gateway / Internal endpoints (InternalAuth) ─────────
 	internal := r.Group("", middleware.InternalAuth())
 	{
-		internal.GET("/internal/chains/:id",     h.GetGatewayChain)
-		internal.POST("/v1/cache/invalidate",  h.InvalidateCache)
+		internal.GET("/internal/chains/:id", h.GetGatewayChain)
+		internal.POST("/v1/cache/invalidate", h.InvalidateCache)
 	}
 
 	// ─── Management API (X-Org-ID + X-User-ID headers) ───────
@@ -49,18 +49,18 @@ func SetupRouter(h *Handlers, env string) *gin.Engine {
 	{
 		chains := v1.Group("/chains")
 		{
-			chains.GET("",             h.ListChains)
-			chains.POST("",            h.CreateChain)
-			chains.GET("/:id",         h.GetChain)
-			chains.PUT("/:id",         h.UpdateChain)
-			chains.DELETE("/:id",      h.DeleteChain)
+			chains.GET("", h.ListChains)
+			chains.POST("", h.CreateChain)
+			chains.GET("/:id", h.GetChain)
+			chains.PUT("/:id", h.UpdateChain)
+			chains.DELETE("/:id", h.DeleteChain)
 			chains.POST("/:id/publish", h.PublishChain)
 
 			pol := chains.Group("/:id/policies")
 			{
-				pol.GET("",              h.ListPolicies)
-				pol.POST("",             h.CreatePolicy)
-				pol.PUT("/:policyId",    h.UpdatePolicy)
+				pol.GET("", h.ListPolicies)
+				pol.POST("", h.CreatePolicy)
+				pol.PUT("/:policyId", h.UpdatePolicy)
 				pol.DELETE("/:policyId", h.DeletePolicy)
 			}
 		}

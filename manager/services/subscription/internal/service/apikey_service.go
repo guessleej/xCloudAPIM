@@ -118,19 +118,19 @@ func (s *APIKeyService) Verify(ctx context.Context, rawKey string) (*domain.APIK
 		}
 		// 快取命中：建構輕量回應（不查 PostgreSQL）
 		return &domain.APIKey{
-			ID:             info["key_id"],
-			SubscriptionID: info["sub_id"],
-			OrganizationID: info["org_id"],
-			KeyHash:        hash,
-			Status:         domain.KeyStatusActive,
-		}, &domain.Subscription{
-			ID:             info["sub_id"],
-			APIID:          info["api_id"],
-			OrganizationID: info["org_id"],
-		}, &domain.Plan{
-			ID:   info["plan_id"],
-			Name: info["plan_name"],
-		}, nil
+				ID:             info["key_id"],
+				SubscriptionID: info["sub_id"],
+				OrganizationID: info["org_id"],
+				KeyHash:        hash,
+				Status:         domain.KeyStatusActive,
+			}, &domain.Subscription{
+				ID:             info["sub_id"],
+				APIID:          info["api_id"],
+				OrganizationID: info["org_id"],
+			}, &domain.Plan{
+				ID:   info["plan_id"],
+				Name: info["plan_name"],
+			}, nil
 	}
 
 	// Cache miss：查 PostgreSQL

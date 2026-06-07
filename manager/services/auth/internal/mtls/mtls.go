@@ -1,6 +1,7 @@
 // Package mtls 提供服務間 mTLS 的 TLS 設定（P3-3）。
 // 由 MTLS_ENABLED=true 啟用；憑證自 MTLS_CERT_DIR（預設 /etc/mtls）讀取：
-//   ca.crt（內部 CA）、service.crt + service.key（共用服務憑證，server/client 兩用）。
+//
+//	ca.crt（內部 CA）、service.crt + service.key（共用服務憑證，server/client 兩用）。
 package mtls
 
 import (

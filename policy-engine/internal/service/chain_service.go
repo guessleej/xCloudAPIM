@@ -14,9 +14,9 @@ import (
 // - 讀取路徑 (Gateway GET /v1/chains/:apiId) → store.ChainRepository (Redis + PostgreSQL snapshot)
 // - 寫入路徑 (BFF mutations / Studio) → repository.ManagementRepo (policy_chains + policies)
 type ChainService struct {
-	mgmtRepo   *repository.ManagementRepo
-	storeRepo  *store.ChainRepository // read side: Redis L1 + PostgreSQL L2
-	logger     *zap.Logger
+	mgmtRepo  *repository.ManagementRepo
+	storeRepo *store.ChainRepository // read side: Redis L1 + PostgreSQL L2
+	logger    *zap.Logger
 }
 
 func NewChainService(

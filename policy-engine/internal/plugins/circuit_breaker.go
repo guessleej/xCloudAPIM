@@ -14,11 +14,12 @@ import (
 // 狀態持久化於 Redis，支援分散式多節點共享
 //
 // config keys:
-//   threshold       = "5"     (連續失敗 N 次後開啟熔斷，預設 5)
-//   timeout         = "30"    (open → half_open 等待秒數，預設 30)
-//   half_open_max   = "2"     (half_open 允許通過的探測請求數，預設 2)
-//   window          = "60"    (計算錯誤率的滑動窗口秒數，預設 60)
-//   error_threshold = "50"    (窗口內錯誤率 % 超過此值觸發熔斷，預設 50)
+//
+//	threshold       = "5"     (連續失敗 N 次後開啟熔斷，預設 5)
+//	timeout         = "30"    (open → half_open 等待秒數，預設 30)
+//	half_open_max   = "2"     (half_open 允許通過的探測請求數，預設 2)
+//	window          = "60"    (計算錯誤率的滑動窗口秒數，預設 60)
+//	error_threshold = "50"    (窗口內錯誤率 % 超過此值觸發熔斷，預設 50)
 type CircuitBreakerPlugin struct {
 	rdb *redis.Client
 }
@@ -42,23 +43,33 @@ func (p *CircuitBreakerPlugin) Validate(config map[string]string) []string {
 }
 
 func (p *CircuitBreakerPlugin) Execute(ctx context.Context, execCtx *domain.ExecContext, config map[string]string) error {
-	threshold, _     := strconv.Atoi(cfgGetDefault(config, "threshold", "5"))
-	timeoutSec, _    := strconv.Atoi(cfgGetDefault(config, "timeout", "30"))
-	halfOpenMax, _   := strconv.Atoi(cfgGetDefault(config, "half_open_max", "2"))
-	windowSec, _     := strconv.Atoi(cfgGetDefault(config, "window", "60"))
-	errThreshold, _  := strconv.Atoi(cfgGetDefault(config, "error_threshold", "50"))
+	threshold, _ := strconv.Atoi(cfgGetDefault(config, "threshold", "5"))
+	timeoutSec, _ := strconv.Atoi(cfgGetDefault(config, "timeout", "30"))
+	halfOpenMax, _ := strconv.Atoi(cfgGetDefault(config, "half_open_max", "2"))
+	windowSec, _ := strconv.Atoi(cfgGetDefault(config, "window", "60"))
+	errThreshold, _ := strconv.Atoi(cfgGetDefault(config, "error_threshold", "50"))
 
-	if threshold <= 0    { threshold = 5 }
-	if timeoutSec <= 0   { timeoutSec = 30 }
-	if halfOpenMax <= 0  { halfOpenMax = 2 }
-	if windowSec <= 0    { windowSec = 60 }
-	if errThreshold <= 0 { errThreshold = 50 }
+	if threshold <= 0 {
+		threshold = 5
+	}
+	if timeoutSec <= 0 {
+		timeoutSec = 30
+	}
+	if halfOpenMax <= 0 {
+		halfOpenMax = 2
+	}
+	if windowSec <= 0 {
+		windowSec = 60
+	}
+	if errThreshold <= 0 {
+		errThreshold = 50
+	}
 
-	stateKey   := fmt.Sprintf("cb:state:%s", execCtx.APIID)
-	openAtKey  := fmt.Sprintf("cb:open_at:%s", execCtx.APIID)
-	failKey    := fmt.Sprintf("cb:fail:%s", execCtx.APIID)
-	totalKey   := fmt.Sprintf("cb:total:%s", execCtx.APIID)
-	halfKey    := fmt.Sprintf("cb:half:%s", execCtx.APIID)
+	stateKey := fmt.Sprintf("cb:state:%s", execCtx.APIID)
+	openAtKey := fmt.Sprintf("cb:open_at:%s", execCtx.APIID)
+	failKey := fmt.Sprintf("cb:fail:%s", execCtx.APIID)
+	totalKey := fmt.Sprintf("cb:total:%s", execCtx.APIID)
+	halfKey := fmt.Sprintf("cb:half:%s", execCtx.APIID)
 
 	state := p.getState(ctx, stateKey)
 

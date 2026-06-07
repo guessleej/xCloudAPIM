@@ -44,19 +44,19 @@ func main() {
 	defer producer.Close()
 
 	// ─── Repositories ─────────────────────────────────────────
-	apiRepo     := repository.NewAPIRepository(db)
+	apiRepo := repository.NewAPIRepository(db)
 	versionRepo := repository.NewVersionRepository(db)
 
 	// ─── Services ─────────────────────────────────────────────
 	specService := service.NewSpecService()
-	apiService  := service.NewAPIService(
+	apiService := service.NewAPIService(
 		apiRepo, versionRepo, specService,
 		producer, cfg.Kafka.TopicAPIEvents,
 		logger,
 	)
 
 	// ─── HTTP Server ──────────────────────────────────────────
-	h      := handler.NewHandlers(apiService, db, logger)
+	h := handler.NewHandlers(apiService, db, logger)
 	router := handler.SetupRouter(h, cfg.Server.Environment)
 
 	srv := &http.Server{

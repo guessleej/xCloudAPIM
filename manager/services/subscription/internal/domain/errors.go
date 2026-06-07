@@ -3,16 +3,16 @@ package domain
 import "errors"
 
 var (
-	ErrNotFound           = errors.New("not found")
-	ErrSubscriptionExists = errors.New("subscription already exists for this org and API")
-	ErrInvalidStatus      = errors.New("invalid status transition")
-	ErrPlanNotFound       = errors.New("plan not found")
-	ErrAPIKeyNotFound     = errors.New("api key not found")
-	ErrAPIKeyRevoked      = errors.New("api key has been revoked")
-	ErrAPIKeyExpired      = errors.New("api key has expired")
-	ErrQuotaExceeded      = errors.New("quota exceeded")
-	ErrMaxKeysReached     = errors.New("maximum api keys limit reached for this plan")
-	ErrUnauthorized       = errors.New("unauthorized")
+	ErrNotFound              = errors.New("not found")
+	ErrSubscriptionExists    = errors.New("subscription already exists for this org and API")
+	ErrInvalidStatus         = errors.New("invalid status transition")
+	ErrPlanNotFound          = errors.New("plan not found")
+	ErrAPIKeyNotFound        = errors.New("api key not found")
+	ErrAPIKeyRevoked         = errors.New("api key has been revoked")
+	ErrAPIKeyExpired         = errors.New("api key has expired")
+	ErrQuotaExceeded         = errors.New("quota exceeded")
+	ErrMaxKeysReached        = errors.New("maximum api keys limit reached for this plan")
+	ErrUnauthorized          = errors.New("unauthorized")
 	ErrSubscriptionNotActive = errors.New("subscription is not active")
 )
 

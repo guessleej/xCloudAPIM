@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 type Config struct {
 	Server   ServerConfig
 	Postgres PostgresConfig

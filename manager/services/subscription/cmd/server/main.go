@@ -11,8 +11,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/redis/go-redis/v9"
 	_ "github.com/lib/pq"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -60,22 +60,22 @@ func main() {
 	defer rdb.Close()
 
 	// ─── Repositories ─────────────────────────────────────────
-	planRepo  := repository.NewPlanRepo(db)
-	subRepo   := repository.NewSubscriptionRepo(db)
-	keyRepo   := repository.NewAPIKeyRepo(db)
+	planRepo := repository.NewPlanRepo(db)
+	subRepo := repository.NewSubscriptionRepo(db)
+	keyRepo := repository.NewAPIKeyRepo(db)
 	quotaRepo := repository.NewQuotaRepo(db)
 
 	// ─── Cache ────────────────────────────────────────────────
 	quotaCache := cache.NewQuotaCache(rdb)
 
 	// ─── Services ─────────────────────────────────────────────
-	subSvc   := service.NewSubscriptionService(subRepo, planRepo)
-	keySvc   := service.NewAPIKeyService(keyRepo, subRepo, planRepo, quotaCache)
+	subSvc := service.NewSubscriptionService(subRepo, planRepo)
+	keySvc := service.NewAPIKeyService(keyRepo, subRepo, planRepo, quotaCache)
 	quotaSvc := service.NewQuotaService(quotaRepo, subRepo, planRepo, quotaCache, log)
 
 	// ─── HTTP ─────────────────────────────────────────────────
-	subH   := handler.NewSubscriptionHandler(subSvc)
-	keyH   := handler.NewAPIKeyHandler(keySvc)
+	subH := handler.NewSubscriptionHandler(subSvc)
+	keyH := handler.NewAPIKeyHandler(keySvc)
 	quotaH := handler.NewQuotaHandler(quotaSvc)
 	router := handler.NewRouter(subH, keyH, quotaH, log, cfg.Server.Environment, db, rdb)
 

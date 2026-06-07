@@ -141,9 +141,10 @@ func sortedPolicies(policies []*domain.Policy) []*domain.Policy {
 
 // evalCondition 解析簡易條件表達式
 // 支援格式:
-//   "header.X-Client-Plan=premium"
-//   "claim.plan=pro"
-//   "method=POST"
+//
+//	"header.X-Client-Plan=premium"
+//	"claim.plan=pro"
+//	"method=POST"
 func evalCondition(cond string, execCtx *domain.ExecContext) bool {
 	parts := strings.SplitN(cond, "=", 2)
 	if len(parts) != 2 {

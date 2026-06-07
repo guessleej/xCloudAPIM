@@ -8,24 +8,24 @@ import (
 
 // ─── API ─────────────────────────────────────────────────────
 type API struct {
-	ID             uuid.UUID  `json:"id"              db:"id"`
-	OrganizationID uuid.UUID  `json:"organization_id" db:"organization_id"`
-	Name           string     `json:"name"            db:"name"`
-	Slug           string     `json:"slug"            db:"slug"`
-	Description    string     `json:"description"     db:"description"`
-	Category       string     `json:"category"        db:"category"`
-	Tags           []string   `json:"tags"            db:"tags"`
-	Status         APIStatus  `json:"status"          db:"status"`
-	IsPublic       bool       `json:"is_public"       db:"is_public"`
-	OwnerID        uuid.UUID  `json:"owner_id"        db:"owner_id"`
-	ThumbnailURL   string     `json:"thumbnail_url"   db:"thumbnail_url"`
-	DocumentationURL string   `json:"documentation_url" db:"documentation_url"`
-	Metadata       JSONMap    `json:"metadata"        db:"metadata"`
-	CreatedAt      time.Time  `json:"created_at"      db:"created_at"`
-	UpdatedAt      time.Time  `json:"updated_at"      db:"updated_at"`
+	ID               uuid.UUID `json:"id"              db:"id"`
+	OrganizationID   uuid.UUID `json:"organization_id" db:"organization_id"`
+	Name             string    `json:"name"            db:"name"`
+	Slug             string    `json:"slug"            db:"slug"`
+	Description      string    `json:"description"     db:"description"`
+	Category         string    `json:"category"        db:"category"`
+	Tags             []string  `json:"tags"            db:"tags"`
+	Status           APIStatus `json:"status"          db:"status"`
+	IsPublic         bool      `json:"is_public"       db:"is_public"`
+	OwnerID          uuid.UUID `json:"owner_id"        db:"owner_id"`
+	ThumbnailURL     string    `json:"thumbnail_url"   db:"thumbnail_url"`
+	DocumentationURL string    `json:"documentation_url" db:"documentation_url"`
+	Metadata         JSONMap   `json:"metadata"        db:"metadata"`
+	CreatedAt        time.Time `json:"created_at"      db:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"      db:"updated_at"`
 	// 關聯（join 查詢時填入）
-	LatestVersion  *APIVersion `json:"latest_version,omitempty" db:"-"`
-	VersionCount   int         `json:"version_count,omitempty"  db:"version_count"`
+	LatestVersion *APIVersion `json:"latest_version,omitempty" db:"-"`
+	VersionCount  int         `json:"version_count,omitempty"  db:"version_count"`
 }
 
 type APIStatus string
@@ -39,29 +39,29 @@ const (
 
 // ─── API Version ──────────────────────────────────────────────
 type APIVersion struct {
-	ID              uuid.UUID         `json:"id"               db:"id"`
-	APIID           uuid.UUID         `json:"api_id"           db:"api_id"`
-	Version         string            `json:"version"          db:"version"`
-	Status          VersionStatus     `json:"status"           db:"status"`
-	SpecFormat      string            `json:"spec_format"      db:"spec_format"`
-	SpecContent     string            `json:"spec_content,omitempty" db:"spec_content"`
-	SpecVersion     string            `json:"spec_version"     db:"spec_version"`
-	BackendProtocol string            `json:"backend_protocol" db:"backend_protocol"`
-	UpstreamURL     string            `json:"upstream_url"     db:"upstream_url"`
-	StripPrefix     string            `json:"strip_prefix"     db:"strip_prefix"`
-	BasePath        string            `json:"base_path"        db:"base_path"`
-	TimeoutMS       int               `json:"timeout_ms"       db:"timeout_ms"`
-	RetryCount      int               `json:"retry_count"      db:"retry_count"`
-	RetryDelayMS    int               `json:"retry_delay_ms"   db:"retry_delay_ms"`
-	Changelog       string            `json:"changelog"        db:"changelog"`
-	PublishedAt     *time.Time        `json:"published_at"     db:"published_at"`
-	DeprecatedAt    *time.Time        `json:"deprecated_at"    db:"deprecated_at"`
-	SunsetDate      *time.Time        `json:"sunset_date"      db:"sunset_date"`
-	CreatedBy       uuid.UUID         `json:"created_by"       db:"created_by"`
-	CreatedAt       time.Time         `json:"created_at"       db:"created_at"`
-	UpdatedAt       time.Time         `json:"updated_at"       db:"updated_at"`
+	ID              uuid.UUID     `json:"id"               db:"id"`
+	APIID           uuid.UUID     `json:"api_id"           db:"api_id"`
+	Version         string        `json:"version"          db:"version"`
+	Status          VersionStatus `json:"status"           db:"status"`
+	SpecFormat      string        `json:"spec_format"      db:"spec_format"`
+	SpecContent     string        `json:"spec_content,omitempty" db:"spec_content"`
+	SpecVersion     string        `json:"spec_version"     db:"spec_version"`
+	BackendProtocol string        `json:"backend_protocol" db:"backend_protocol"`
+	UpstreamURL     string        `json:"upstream_url"     db:"upstream_url"`
+	StripPrefix     string        `json:"strip_prefix"     db:"strip_prefix"`
+	BasePath        string        `json:"base_path"        db:"base_path"`
+	TimeoutMS       int           `json:"timeout_ms"       db:"timeout_ms"`
+	RetryCount      int           `json:"retry_count"      db:"retry_count"`
+	RetryDelayMS    int           `json:"retry_delay_ms"   db:"retry_delay_ms"`
+	Changelog       string        `json:"changelog"        db:"changelog"`
+	PublishedAt     *time.Time    `json:"published_at"     db:"published_at"`
+	DeprecatedAt    *time.Time    `json:"deprecated_at"    db:"deprecated_at"`
+	SunsetDate      *time.Time    `json:"sunset_date"      db:"sunset_date"`
+	CreatedBy       uuid.UUID     `json:"created_by"       db:"created_by"`
+	CreatedAt       time.Time     `json:"created_at"       db:"created_at"`
+	UpdatedAt       time.Time     `json:"updated_at"       db:"updated_at"`
 	// 解析後的 Spec 摘要
-	SpecSummary     *SpecSummary      `json:"spec_summary,omitempty" db:"-"`
+	SpecSummary *SpecSummary `json:"spec_summary,omitempty" db:"-"`
 }
 
 type VersionStatus string
@@ -75,13 +75,13 @@ const (
 
 // ─── OpenAPI Spec 摘要 ────────────────────────────────────────
 type SpecSummary struct {
-	Title       string          `json:"title"`
-	Description string          `json:"description"`
-	Version     string          `json:"version"`
-	Servers     []SpecServer    `json:"servers,omitempty"`
-	Endpoints   []SpecEndpoint  `json:"endpoints"`
-	TagList     []string        `json:"tags,omitempty"`
-	PathCount   int             `json:"path_count"`
+	Title       string         `json:"title"`
+	Description string         `json:"description"`
+	Version     string         `json:"version"`
+	Servers     []SpecServer   `json:"servers,omitempty"`
+	Endpoints   []SpecEndpoint `json:"endpoints"`
+	TagList     []string       `json:"tags,omitempty"`
+	PathCount   int            `json:"path_count"`
 }
 
 type SpecServer struct {
@@ -119,24 +119,24 @@ type GatewayRoute struct {
 // ─── Request / Response DTOs ──────────────────────────────────
 
 type CreateAPIRequest struct {
-	Name             string  `json:"name"              binding:"required,min=2,max=100"`
-	Slug             string  `json:"slug"              binding:"omitempty,min=2,max=100"`
-	Description      string  `json:"description"`
-	Category         string  `json:"category"`
+	Name             string   `json:"name"              binding:"required,min=2,max=100"`
+	Slug             string   `json:"slug"              binding:"omitempty,min=2,max=100"`
+	Description      string   `json:"description"`
+	Category         string   `json:"category"`
 	Tags             []string `json:"tags"`
-	IsPublic         bool    `json:"is_public"`
-	ThumbnailURL     string  `json:"thumbnail_url"`
-	DocumentationURL string  `json:"documentation_url"`
+	IsPublic         bool     `json:"is_public"`
+	ThumbnailURL     string   `json:"thumbnail_url"`
+	DocumentationURL string   `json:"documentation_url"`
 }
 
 type UpdateAPIRequest struct {
-	Name             *string   `json:"name"`
-	Description      *string   `json:"description"`
-	Category         *string   `json:"category"`
-	Tags             []string  `json:"tags"`
-	IsPublic         *bool     `json:"is_public"`
-	ThumbnailURL     *string   `json:"thumbnail_url"`
-	DocumentationURL *string   `json:"documentation_url"`
+	Name             *string    `json:"name"`
+	Description      *string    `json:"description"`
+	Category         *string    `json:"category"`
+	Tags             []string   `json:"tags"`
+	IsPublic         *bool      `json:"is_public"`
+	ThumbnailURL     *string    `json:"thumbnail_url"`
+	DocumentationURL *string    `json:"documentation_url"`
 	Status           *APIStatus `json:"status"`
 }
 
@@ -170,20 +170,20 @@ type UploadSpecRequest struct {
 }
 
 type PublishVersionRequest struct {
-	PathPrefix  string `json:"path_prefix"  binding:"required"`
-	HostMatch   string `json:"host_match"`
-	Priority    int    `json:"priority"`
+	PathPrefix string `json:"path_prefix"  binding:"required"`
+	HostMatch  string `json:"host_match"`
+	Priority   int    `json:"priority"`
 }
 
 type APIListParams struct {
-	Page     int       `form:"page,default=1"`
-	PageSize int       `form:"page_size,default=20"`
-	Status   APIStatus `form:"status"`
-	Category string    `form:"category"`
-	Tag      string    `form:"tag"`
-	Search   string    `form:"search"`
-	SortBy   string    `form:"sort_by,default=created_at"`
-	SortOrder string   `form:"sort_order,default=desc"`
+	Page      int       `form:"page,default=1"`
+	PageSize  int       `form:"page_size,default=20"`
+	Status    APIStatus `form:"status"`
+	Category  string    `form:"category"`
+	Tag       string    `form:"tag"`
+	Search    string    `form:"search"`
+	SortBy    string    `form:"sort_by,default=created_at"`
+	SortOrder string    `form:"sort_order,default=desc"`
 }
 
 type PaginatedAPIs struct {
@@ -196,24 +196,24 @@ type PaginatedAPIs struct {
 
 // ─── Kafka Events ────────────────────────────────────────────
 type APIEvent struct {
-	EventType  string    `json:"event_type"`
-	APIID      string    `json:"api_id"`
-	APIName    string    `json:"api_name"`
-	VersionID  string    `json:"version_id,omitempty"`
-	Version    string    `json:"version,omitempty"`
-	OrgID      string    `json:"org_id"`
-	PerformedBy string   `json:"performed_by,omitempty"`
-	Timestamp  time.Time `json:"timestamp"`
+	EventType   string    `json:"event_type"`
+	APIID       string    `json:"api_id"`
+	APIName     string    `json:"api_name"`
+	VersionID   string    `json:"version_id,omitempty"`
+	Version     string    `json:"version,omitempty"`
+	OrgID       string    `json:"org_id"`
+	PerformedBy string    `json:"performed_by,omitempty"`
+	Timestamp   time.Time `json:"timestamp"`
 }
 
 const (
-	EventAPICreated     = "api.created"
-	EventAPIUpdated     = "api.updated"
-	EventAPIDeleted     = "api.deleted"
-	EventVersionCreated = "api.version.created"
-	EventVersionPublished = "api.version.published"
+	EventAPICreated        = "api.created"
+	EventAPIUpdated        = "api.updated"
+	EventAPIDeleted        = "api.deleted"
+	EventVersionCreated    = "api.version.created"
+	EventVersionPublished  = "api.version.published"
 	EventVersionDeprecated = "api.version.deprecated"
-	EventSpecUploaded   = "api.spec.uploaded"
+	EventSpecUploaded      = "api.spec.uploaded"
 )
 
 // ─── Helpers ─────────────────────────────────────────────────

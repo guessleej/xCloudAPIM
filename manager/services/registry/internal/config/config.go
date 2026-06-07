@@ -15,10 +15,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port        string
-	GRPCPort    string
-	Environment string
-	ReadTimeout time.Duration
+	Port         string
+	GRPCPort     string
+	Environment  string
+	ReadTimeout  time.Duration
 	WriteTimeout time.Duration
 }
 
@@ -29,7 +29,7 @@ type PostgresConfig struct {
 }
 
 type KafkaConfig struct {
-	Brokers          []string
+	Brokers           []string
 	TopicAPIPublished string
 	TopicAPIEvents    string
 }
@@ -62,7 +62,7 @@ func Load() (*Config, error) {
 			MinConns: getEnvInt("POSTGRES_MIN_CONNS", 5),
 		},
 		Kafka: KafkaConfig{
-			Brokers:          []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
+			Brokers:           []string{getEnv("KAFKA_BROKERS", "localhost:9092")},
 			TopicAPIPublished: getEnv("KAFKA_TOPIC_API_PUBLISHED", "api.published"),
 			TopicAPIEvents:    getEnv("KAFKA_TOPIC_API_EVENTS", "api.events"),
 		},

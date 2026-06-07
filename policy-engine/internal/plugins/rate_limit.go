@@ -87,13 +87,14 @@ end
 
 // RateLimitPlugin 多層速率限制（IP / ClientID / UserID）
 // config keys:
-//   strategy       = "sliding_window" | "fixed_window" | "token_bucket"  (預設 sliding_window)
-//   key_by         = "client_id" | "ip" | "user_id"  (預設 client_id)
-//   rpm            = "1000"
-//   rph            = "5000"   (可選)
-//   rpd            = "10000"  (可選)
-//   burst_size     = "200"    (token_bucket 桶容量)
-//   refill_rate    = "16.67"  (token_bucket tokens/sec，預設 rpm/60)
+//
+//	strategy       = "sliding_window" | "fixed_window" | "token_bucket"  (預設 sliding_window)
+//	key_by         = "client_id" | "ip" | "user_id"  (預設 client_id)
+//	rpm            = "1000"
+//	rph            = "5000"   (可選)
+//	rpd            = "10000"  (可選)
+//	burst_size     = "200"    (token_bucket 桶容量)
+//	refill_rate    = "16.67"  (token_bucket tokens/sec，預設 rpm/60)
 type RateLimitPlugin struct {
 	rdb *redis.Client
 }
@@ -123,9 +124,9 @@ func (p *RateLimitPlugin) Validate(config map[string]string) []string {
 
 func (p *RateLimitPlugin) Execute(ctx context.Context, execCtx *domain.ExecContext, config map[string]string) error {
 	strategy := cfgGetDefault(config, "strategy", "sliding_window")
-	keyBy    := cfgGetDefault(config, "key_by", "client_id")
+	keyBy := cfgGetDefault(config, "key_by", "client_id")
 	keyValue := p.resolveKey(execCtx, keyBy)
-	apiID    := execCtx.APIID
+	apiID := execCtx.APIID
 
 	switch strategy {
 	case "token_bucket":
@@ -141,17 +142,17 @@ func (p *RateLimitPlugin) Execute(ctx context.Context, execCtx *domain.ExecConte
 
 func (p *RateLimitPlugin) executeSliding(ctx context.Context, execCtx *domain.ExecContext, config map[string]string, keyValue, apiID string) error {
 	type windowCfg struct {
-		period    string
-		configKey string
-		windowMS  int
-		retryAfter string
+		period       string
+		configKey    string
+		windowMS     int
+		retryAfter   string
 		headerSuffix string
 	}
 
 	windows := []windowCfg{
-		{"rpm", "rpm", 60_000,        "60",    "Minute"},
-		{"rph", "rph", 3_600_000,     "3600",  "Hour"},
-		{"rpd", "rpd", 86_400_000,    "86400", "Day"},
+		{"rpm", "rpm", 60_000, "60", "Minute"},
+		{"rph", "rph", 3_600_000, "3600", "Hour"},
+		{"rpd", "rpd", 86_400_000, "86400", "Day"},
 	}
 
 	for _, w := range windows {
@@ -174,7 +175,7 @@ func (p *RateLimitPlugin) executeSliding(ctx context.Context, execCtx *domain.Ex
 
 		// RFC draft RateLimit headers（以最嚴格窗口為主）
 		remaining := maxInt(0, int(lim)-current)
-		execCtx.SetResponseHeader("RateLimit-Limit",     fmt.Sprintf("%d;w=%d", lim, w.windowMS/1000))
+		execCtx.SetResponseHeader("RateLimit-Limit", fmt.Sprintf("%d;w=%d", lim, w.windowMS/1000))
 		execCtx.SetResponseHeader("RateLimit-Remaining", strconv.Itoa(remaining))
 		if resetAt > 0 {
 			resetSec := maxInt(0, int((resetAt-time.Now().UnixMilli())/1000))
@@ -192,8 +193,8 @@ func (p *RateLimitPlugin) executeSliding(ctx context.Context, execCtx *domain.Ex
 
 func (p *RateLimitPlugin) slidingCheck(ctx context.Context, keyValue, apiID, period string, windowMS, limit int) (allowed bool, current int, resetAtMs int64, err error) {
 	redisKey := fmt.Sprintf("rl:sw:%s:%s:%s", period, keyValue, apiID)
-	nowMS    := time.Now().UnixMilli()
-	reqID    := fmt.Sprintf("%d-%s", nowMS, execRandHex(8))
+	nowMS := time.Now().UnixMilli()
+	reqID := fmt.Sprintf("%d-%s", nowMS, execRandHex(8))
 
 	result, evalErr := p.rdb.Eval(ctx, slidingWindowLua,
 		[]string{redisKey},
@@ -203,9 +204,9 @@ func (p *RateLimitPlugin) slidingCheck(ctx context.Context, keyValue, apiID, per
 		return true, 0, 0, evalErr
 	}
 
-	cur, _     := result[0].(int64)
-	allow, _   := result[3].(int64)
-	oldest, _  := result[4].(int64)
+	cur, _ := result[0].(int64)
+	allow, _ := result[3].(int64)
+	oldest, _ := result[4].(int64)
 
 	resetAt := int64(0)
 	if oldest > 0 {
@@ -228,8 +229,8 @@ func (p *RateLimitPlugin) executeFixed(ctx context.Context, execCtx *domain.Exec
 	}
 
 	windows := []windowCfg{
-		{"rpm", "rpm", 60,    "60",    "Minute"},
-		{"rph", "rph", 3600,  "3600",  "Hour"},
+		{"rpm", "rpm", 60, "60", "Minute"},
+		{"rph", "rph", 3600, "3600", "Hour"},
 		{"rpd", "rpd", 86400, "86400", "Day"},
 	}
 
@@ -256,7 +257,7 @@ func (p *RateLimitPlugin) executeFixed(ctx context.Context, execCtx *domain.Exec
 
 		current, _ := result[0].(int64)
 		allowed, _ := result[2].(int64)
-		ttl, _     := result[3].(int64)
+		ttl, _ := result[3].(int64)
 
 		execCtx.SetResponseHeader("X-RateLimit-Limit-"+w.headerSfx, strconv.FormatInt(lim, 10))
 		execCtx.SetResponseHeader("X-RateLimit-Remaining-"+w.headerSfx, strconv.Itoa(maxInt(0, int(lim)-int(current))))
@@ -276,7 +277,7 @@ func (p *RateLimitPlugin) executeFixed(ctx context.Context, execCtx *domain.Exec
 func (p *RateLimitPlugin) executeTokenBucket(ctx context.Context, execCtx *domain.ExecContext, config map[string]string, keyValue, apiID string) error {
 	rpm, _ := strconv.ParseFloat(cfgGetDefault(config, "rpm", "100"), 64)
 
-	capacity   := float64(0)
+	capacity := float64(0)
 	if bs := cfgGet(config, "burst_size"); bs != "" {
 		capacity, _ = strconv.ParseFloat(bs, 64)
 	}
@@ -293,7 +294,7 @@ func (p *RateLimitPlugin) executeTokenBucket(ctx context.Context, execCtx *domai
 	}
 
 	redisKey := fmt.Sprintf("rl:tb:%s:%s", keyValue, apiID)
-	nowMS    := time.Now().UnixMilli()
+	nowMS := time.Now().UnixMilli()
 
 	result, err := p.rdb.Eval(ctx, tokenBucketLua,
 		[]string{redisKey},
@@ -303,12 +304,12 @@ func (p *RateLimitPlugin) executeTokenBucket(ctx context.Context, execCtx *domai
 		return nil // fail-open
 	}
 
-	tokens, _  := result[0].(int64)
-	cap, _     := result[1].(int64)
+	tokens, _ := result[0].(int64)
+	cap, _ := result[1].(int64)
 	allowed, _ := result[2].(int64)
-	waitMs, _  := result[3].(int64)
+	waitMs, _ := result[3].(int64)
 
-	execCtx.SetResponseHeader("X-RateLimit-Limit-Minute",     strconv.FormatInt(cap, 10))
+	execCtx.SetResponseHeader("X-RateLimit-Limit-Minute", strconv.FormatInt(cap, 10))
 	execCtx.SetResponseHeader("X-RateLimit-Remaining-Minute", strconv.FormatInt(maxInt64(0, tokens), 10))
 
 	if allowed != 1 {

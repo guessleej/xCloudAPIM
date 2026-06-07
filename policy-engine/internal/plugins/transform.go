@@ -14,11 +14,12 @@ import (
 
 // RequestTransformPlugin 修改 Request Headers、Body、URL
 // config keys:
-//   add_headers    = "Key1:Value1,Key2:Value2"
-//   set_headers    = "Key1:Value1"
-//   remove_headers = "X-Internal,X-Secret"
-//   url_rewrite    = "^/v1/(.*):/$1"  (from:to 以 : 分隔)
-//   inject_trace   = "true"           (注入 X-Trace-ID)
+//
+//	add_headers    = "Key1:Value1,Key2:Value2"
+//	set_headers    = "Key1:Value1"
+//	remove_headers = "X-Internal,X-Secret"
+//	url_rewrite    = "^/v1/(.*):/$1"  (from:to 以 : 分隔)
+//	inject_trace   = "true"           (注入 X-Trace-ID)
 type RequestTransformPlugin struct{}
 
 func NewRequestTransformPlugin() *RequestTransformPlugin { return &RequestTransformPlugin{} }
@@ -95,9 +96,10 @@ func (p *RequestTransformPlugin) Execute(ctx context.Context, execCtx *domain.Ex
 
 // ResponseTransformPlugin 修改 Response Headers、Body 敏感欄位遮罩
 // config keys:
-//   add_headers     = "Key1:Value1"
-//   remove_headers  = "Server,X-Powered-By"
-//   mask_fields     = "password,token,secret"  (JSON body 欄位遮罩)
+//
+//	add_headers     = "Key1:Value1"
+//	remove_headers  = "Server,X-Powered-By"
+//	mask_fields     = "password,token,secret"  (JSON body 欄位遮罩)
 type ResponseTransformPlugin struct{}
 
 func NewResponseTransformPlugin() *ResponseTransformPlugin { return &ResponseTransformPlugin{} }

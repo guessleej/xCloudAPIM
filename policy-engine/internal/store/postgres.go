@@ -21,13 +21,13 @@ func NewChainStore(db *sqlx.DB) *ChainStore {
 }
 
 type chainRow struct {
-	ID         string         `db:"id"`
-	APIID      string         `db:"api_id"`
-	Version    int64          `db:"version"`
-	ETag       string         `db:"etag"`
-	PoliciesJS []byte         `db:"policies_json"`
-	CreatedAt  time.Time      `db:"created_at"`
-	UpdatedAt  sql.NullTime   `db:"updated_at"`
+	ID         string       `db:"id"`
+	APIID      string       `db:"api_id"`
+	Version    int64        `db:"version"`
+	ETag       string       `db:"etag"`
+	PoliciesJS []byte       `db:"policies_json"`
+	CreatedAt  time.Time    `db:"created_at"`
+	UpdatedAt  sql.NullTime `db:"updated_at"`
 }
 
 // GetByAPIID 取得指定 API 的最新啟用 PolicyChain
