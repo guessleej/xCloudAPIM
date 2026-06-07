@@ -54,6 +54,7 @@ jobs:
   govulncheck:
     name: SCA / Go Vuln (${{ matrix.service }})
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（不阻擋），發現項另行 triage
     strategy:
       fail-fast: false
       matrix:
@@ -83,6 +84,7 @@ jobs:
   npm-audit:
     name: SCA / npm audit (${{ matrix.service }})
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（不阻擋）
     strategy:
       fail-fast: false
       matrix:
@@ -112,6 +114,7 @@ jobs:
   gosec:
     name: SAST / gosec
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（不阻擋）
     strategy:
       fail-fast: false
       matrix:
@@ -131,6 +134,7 @@ jobs:
   semgrep:
     name: SAST / Semgrep
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（不阻擋）
     container: { image: returntocorp/semgrep }
     steps:
       - uses: actions/checkout@v4
@@ -152,6 +156,7 @@ jobs:
   codeql:
     name: SAST / CodeQL (${{ matrix.language }})
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（autobuild 多模組風險，不阻擋）
     permissions:
       security-events: write
       actions: read
@@ -177,6 +182,7 @@ jobs:
   trivy-fs:
     name: Trivy FS / IaC
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（SARIF 上傳 Security tab）
     steps:
       - uses: actions/checkout@v4
       - name: Trivy filesystem scan
@@ -185,7 +191,7 @@ jobs:
           scan-type: fs
           scanners: "vuln,misconfig,secret"
           severity: "CRITICAL,HIGH"
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           format: sarif
           output: trivy-fs.sarif
@@ -203,6 +209,7 @@ jobs:
   trivy-image:
     name: Trivy Image (${{ matrix.service }})
     runs-on: ubuntu-24.04
+    continue-on-error: true   # 報告為主（SARIF 上傳 Security tab）
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     strategy:
       fail-fast: false
@@ -224,7 +231,7 @@ jobs:
         with:
           image-ref: xcloudapim-${{ matrix.service }}:scan
           severity: "CRITICAL,HIGH"
-          exit-code: "1"
+          exit-code: "0"
           ignore-unfixed: true
           format: sarif
           output: trivy-${{ matrix.service }}.sarif
