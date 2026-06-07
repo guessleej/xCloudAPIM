@@ -6,7 +6,7 @@
  *   realm         = "xCloudAPIM"  (WWW-Authenticate header)
  *   fail_open     = "false"
  */
-import { fetch } from 'undici'
+import { internalFetch as fetch } from '../../../mtls.js'
 import type { ExecContext, PluginDeps } from '../../types.js'
 import { applyIdentity } from './claims.js'
 import { config as appConfig } from '../../../config/index.js'

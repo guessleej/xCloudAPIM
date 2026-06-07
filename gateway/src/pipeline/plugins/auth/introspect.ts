@@ -11,7 +11,7 @@
  *   fail_open        = "false"
  */
 import { createHash } from 'node:crypto'
-import { fetch } from 'undici'
+import { internalFetch as fetch } from '../../../mtls.js'
 import type { ExecContext, PluginDeps } from '../../types.js'
 import { applyIdentity, forwardClaims, extractScopes } from './claims.js'
 import { config as appConfig } from '../../../config/index.js'

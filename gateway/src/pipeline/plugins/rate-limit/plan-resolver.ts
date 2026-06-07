@@ -1,4 +1,4 @@
-import { fetch } from 'undici'
+import { internalFetch as fetch } from '../../../mtls.js'
 import { config as appConfig } from '../../../config/index.js'
 import type { Redis } from 'ioredis'
 

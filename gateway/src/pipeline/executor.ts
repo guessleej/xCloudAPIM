@@ -1,6 +1,6 @@
 import type { Redis } from 'ioredis'
 import type { FastifyBaseLogger } from 'fastify'
-import { fetch } from 'undici'
+import { internalFetch as fetch } from '../mtls.js'
 import type {
   ExecContext, PolicyChain, PolicyDef, PolicyPhase, PluginExecutor,
 } from './types.js'

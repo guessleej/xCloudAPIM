@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { fetch } from 'undici'
+import { internalFetch as fetch } from '../../mtls.js'
 import type { ExecContext, PluginDeps } from '../types.js'
 import { abort } from '../types.js'
 import { config } from '../../config/index.js'

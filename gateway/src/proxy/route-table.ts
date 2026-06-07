@@ -1,8 +1,8 @@
-import { fetch } from 'undici'
 import type { Redis } from 'ioredis'
 import type { FastifyBaseLogger } from 'fastify'
 import { config } from '../config/index.js'
 import { internalHeaders } from '../plugins/internal-token.js'
+import { internalFetch as fetch } from '../mtls.js'
 
 export interface RouteEntry {
   id?:         string
