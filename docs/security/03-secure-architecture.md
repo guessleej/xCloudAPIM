@@ -132,6 +132,8 @@ USER 10001:10001                 # non-root
 | **P3-3a** ✅ | 服務間 mTLS — Go 後端 server 端（auth/registry/subscription/policy-engine 於 :9443 強制 mTLS，dual-listener 與 plain port 並存） | 高（已驗證；client 端尚未切換故未端到端強制） |
 | **P3-3b-1** ✅ | mTLS client — **gateway** 對 registry/policy-engine/subscription/auth 內部呼叫走 :9443（內部 host 白名單轉址 + client 憑證；JWKS/外部端點除外）。已捕捉 gateway→registry:9443 連線實證 | 高（已驗證；MTLS_ENABLED 開關） |
 | **P3-3b-2** ✅ | mTLS client — **bff** 內部呼叫（ServiceClient 單一 chokepoint：undici Pool connect 帶 client 憑證走 :9443）。已驗證帶憑證握手成功、不帶被拒 | 高（已驗證；MTLS_ENABLED 開關） |
-| **P3-3b-3** ⬜ | Node mTLS servers（gateway/bff）+ nginx upstream mTLS（portal/studio UI 層另計） | 高 |
+| **P3-3b-3** ✅ | Node mTLS servers（gateway/bff dual-listener :9443）+ **nginx upstream mTLS**。端到端驗證 nginx→gateway/bff:9443→後端 全鏈 mTLS（portal/studio UI 層維持 http；JWKS 公鑰維持 plain） | 高（已上線驗證；MTLS_ENABLED 開關、dual-listener 可回滾） |
+
+> **P3-3 服務間 mTLS 主鏈完成**：nginx → gateway/bff → auth/registry/subscription/policy-engine 全程 mTLS（內部 CA、雙向驗證）。剩餘非 mTLS：portal/studio UI 層、JWKS 公鑰端點（低敏感）。
 
 > 本次（P0）聚焦「不改變執行架構」的安全內建；P1–P3 以 issue 追蹤、分批驗證上線，避免破壞既有運行系統。
