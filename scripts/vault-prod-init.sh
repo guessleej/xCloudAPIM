@@ -146,6 +146,26 @@ path "sys/leases/renew" {
 POLICY
 echo "✅ Policy 'apim-service' created"
 
+# ─── Audit device（記錄所有 Vault 存取，P3 硬化）──────────────
+echo "▶ Enabling Vault audit device..."
+vault audit enable file file_path=/vault/data/vault-audit.log 2>/dev/null \
+  && echo "✅ Audit device enabled (/vault/data/vault-audit.log)" \
+  || echo "ℹ️  Audit device already enabled"
+
+# ─── AppRole（供服務以 role_id/secret_id 取代 root token）─────
+echo "▶ Setting up AppRole..."
+vault auth enable approle 2>/dev/null || echo "ℹ️  approle already enabled"
+vault policy write apim-svc - <<'POLICY'
+path "secret/data/jwt"         { capabilities = ["read"] }
+path "secret/data/internal"    { capabilities = ["read"] }
+path "database/creds/apim-dyn" { capabilities = ["read"] }
+path "sys/leases/renew"        { capabilities = ["update"] }
+POLICY
+vault write auth/approle/role/apim \
+  token_policies=apim-svc token_ttl=1h token_max_ttl=4h secret_id_ttl=720h >/dev/null
+echo "✅ AppRole 'apim' created（role_id: vault read auth/approle/role/apim/role-id）"
+echo "ℹ️  服務遷移：以 VAULT_ROLE_ID/VAULT_SECRET_ID 取代 VAULT_TOKEN（見 DEPLOYMENT §8.10）"
+
 echo ""
 echo "╔════════════════════════════════════════════╗"
 echo "║  ✅ Vault Production Init Complete         ║"

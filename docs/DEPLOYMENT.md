@@ -405,6 +405,28 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
 - 注意：mTLS 憑證須可被服務使用者(uid 1001 / nginx)讀取；CA 私鑰於簽發後刪除，
   重簽需重產整組（或離線保管 ca.key）。
 
+## 8.10 Vault 硬化（P3）
+
+已上線（vault-prod-init.sh 自動套用）：
+- **Audit device**：`/vault/data/vault-audit.log` 記錄所有 Vault 存取（不可否認性）。
+- **AppRole**：policy `apim-svc`（最小授權：讀 secret/jwt、internal、database/creds、續租）
+  + role `apim`（token_ttl 1h）。`vault read auth/approle/role/apim/role-id` 取 role_id。
+
+**待完成（staged，多服務變更，需排期）**：
+- 服務改用 **AppRole**：以 `VAULT_ROLE_ID`/`VAULT_SECRET_ID` 取代各服務的 root `VAULT_TOKEN`
+  （4 Go 服務 + audit-sink 的 vault client login 流程），登出 root token。
+- **Vault TLS**：`config.hcl` 設 `tls_cert_file`/`tls_key_file`（移除 tls_disable），
+  所有 vault client 改 `https://vault:8200` + CA。
+- **Auto-unseal**：以 transit（第二 Vault）或雲 KMS 取代 Shamir 手動 unseal。
+
+## 8.11 正式 CA / PKI（待完成）
+
+目前 TLS 憑證為自簽（資料層 `sslmode=require` + `rejectUnauthorized:false`；mTLS 用內部 CA）。
+到生產 100% 需：
+- 統一 **內部 Root CA**（離線保管私鑰）簽發所有服務/資料層憑證；資料層 client 改
+  `verify-full` / `rejectUnauthorized:true` 驗證鏈（逐服務驗證，避免 SAN/CA 不符中斷連線）。
+- 對外端點若有公開網域 → 以 **ACME/Let's Encrypt** 取得公信憑證（本部署為內網 IP，暫用自簽）。
+
 ## 9. 疑難排解（首次部署常見坑）
 
 | 症狀 | 原因 | 解法 |
