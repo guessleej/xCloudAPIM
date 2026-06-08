@@ -167,7 +167,7 @@ services:
     ports:
       - "16379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/redis.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
+      test: ["CMD", "redis-cli", "--tls", "--cert", "/tls/redis.crt", "--key", "/tls/redis.key", "--cacert", "/tls/ca.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -201,7 +201,7 @@ services:
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/redis.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
+      test: ["CMD", "redis-cli", "--tls", "--cert", "/tls/redis.crt", "--key", "/tls/redis.key", "--cacert", "/tls/ca.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -235,7 +235,7 @@ services:
     ports:
       - "16381:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "--tls", "--cacert", "/tls/redis.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
+      test: ["CMD", "redis-cli", "--tls", "--cert", "/tls/redis.crt", "--key", "/tls/redis.key", "--cacert", "/tls/ca.crt", "-a", "${REDIS_PASSWORD:?REDIS_PASSWORD is required}", "-p", "6379", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -330,7 +330,7 @@ services:
   redis-cluster-init:
     image: redis:7-alpine
     container_name: apim-redis-cluster-init
-    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --tls --cacert /tls/redis.crt --cluster create ${REDIS_M1_IP:-172.28.40.21}:6379 ${REDIS_M2_IP:-172.28.40.22}:6379 ${REDIS_M3_IP:-172.28.40.23}:6379 ${REDIS_R1_IP:-172.28.40.24}:6379 ${REDIS_R2_IP:-172.28.40.25}:6379 ${REDIS_R3_IP:-172.28.40.26}:6379 --cluster-replicas 1 --cluster-yes"
+    command: sh -c "sleep 5 && redis-cli -a $$REDIS_PASSWORD --tls --cert /tls/redis.crt --key /tls/redis.key --cacert /tls/ca.crt --cluster create ${REDIS_M1_IP:-172.28.40.21}:6379 ${REDIS_M2_IP:-172.28.40.22}:6379 ${REDIS_M3_IP:-172.28.40.23}:6379 ${REDIS_R1_IP:-172.28.40.24}:6379 ${REDIS_R2_IP:-172.28.40.25}:6379 ${REDIS_R3_IP:-172.28.40.26}:6379 --cluster-replicas 1 --cluster-yes"
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
     volumes:
