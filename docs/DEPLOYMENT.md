@@ -452,8 +452,11 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
   tlsCAFile=rootCA.crt（已驗證 MongoDB connected）。
 - postgres 其餘 client：flyway（JDBC truststore）、postgres-exporter、audit-sink（node pg）、pgadmin。
 - ✅ **elasticsearch**：Root-CA 憑證；kibana CERTIFICATEAUTHORITIES→Root CA（已驗證 Kibana available）。
-- 其他 datastore：kafka、redis（client 最多 + cluster bus，最後）——`gen-root-ca.sh <ds>` 重簽 →
-  各 client 由 `InsecureSkipVerify` 改 `RootCAs=rootCA.crt`+`ServerName`（逐一驗證）。
+- ✅ **kafka**：以 Root CA 重簽 broker JKS keystore（含鏈）；7 個 client（Go kafka-go ×4 +
+  Node kafkajs ×3）由 skip-verify 改帶 Root CA 驗證（已端到端驗證 login→audit_log）。
+  注意：gen JKS 的 cp-kafka 需 `--user root` 才讀得到 600 的 rootCA.key。
+- redis（最後）：client 最多 + 6 節點 cluster bus 互信——`gen-root-ca.sh redis` 重簽 →
+  各 client `InsecureSkipVerify` 改帶 Root CA（逐一驗證）。
 - ✅ **vault**：重簽 Root-CA 憑證；4 服務 VAULT_SKIP_VERIFY→VAULT_CACERT（已驗證 AppRole over verified TLS）。
 - 對外端點若有公開網域 → ACME/Let's Encrypt（本部署為內網 IP，暫自簽）。
 
