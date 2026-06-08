@@ -422,10 +422,17 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
   JWKS + DB 動態憑證正常。
 - root token 僅保留作 vault 管理 / break-glass（建議離線加密保管，不作運行使用）。
 
-**待完成（staged，需排期）**：
-- **Vault TLS**：`config.hcl` 設 `tls_cert_file`/`tls_key_file`（移除 tls_disable），
-  所有 vault client 改 `https://vault:8200` + CA。
-- **Auto-unseal**：以 transit（第二 Vault）或雲 KMS 取代 Shamir 手動 unseal。
+**已完成（P3 Phase 4a）Vault TLS**：
+- `config.hcl` 啟用 `tls_cert_file`/`tls_key_file`（移除 tls_disable）；`scripts/gen-vault-tls.sh`
+  產自簽 vault 憑證。所有 client（vault-init + 4 服務 + healthcheck）改 `https://vault:8200`
+  + `VAULT_SKIP_VERIFY=true`。已驗證 https OK / http 被拒、AppRole 登入走 TLS、JWKS/DB 正常。
+- **重啟 Vault 會 re-seal**：用 `/vault/data/.init_keys` 的 3 把 key 解封
+  （`vault operator unseal -tls-skip-verify <key>`），再重建依賴服務。
+
+**待完成（需 KMS/HSM 基礎設施）Auto-unseal**：
+- 真正 auto-unseal 需雲 KMS（AWS/GCP/Azure）或 HSM；transit（第二 Vault）方案的 transit
+  vault 本身仍需解封（僅搬移問題）。本內網主機無 KMS，故**保留 Shamir 手動解封**
+  （unseal keys 離線加密備份），待具備 KMS 時導入 seal "awskms"/"gcpckms" 區塊。
 
 ## 8.11 正式 CA / PKI（待完成）
 
