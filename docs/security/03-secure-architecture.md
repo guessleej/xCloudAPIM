@@ -128,7 +128,7 @@ USER 10001:10001                 # non-root
 | **P2-A** ✅ | **生產 TLS（資料層全部）：Postgres / Redis(含 cluster bus) / MongoDB / Kafka(SASL_SSL) / Elasticsearch** | 中高（已逐服務驗證上線） |
 | **P2-B-1** ✅ | **網路多網段分區（edge/app/svc/data，svc+data internal，全參數化可依環境設定）** | 高（已一次性重建驗證；data 層隔離已實證） |
 | **P2-B-2** ✅ | **Vault 動態憑證（DB secrets engine 動態簽發 postgres 帳密；4 服務背景續租/輪轉）** | 中高（已上線驗證；fallback 開關 VAULT_DB_CREDS） |
-| **P3-1** ✅ | **不可變稽核日誌**（postgres append-only + 觸發器禁改 + hash chain + audit-sink consumer） | 中（已上線驗證；稽核 topics 待服務端產生事件） |
+| **P3-1** ✅ | **不可變稽核日誌**（postgres append-only + 觸發器禁改 + hash chain + audit-sink consumer；auth 已發布 login/login_failed/logout/register 事件，端到端驗證有資料） | 中（已上線驗證） |
 | **P3-2** ✅ | **自動金鑰輪轉**（Vault KV 版本化 JWT 金鑰，背景輪轉，JWKS 新舊重疊零停機；DB 憑證已於 P2-B-2 動態輪轉） | 中（已上線驗證；JWT_AUTO_ROTATE 開關） |
 | **P3-3a** ✅ | 服務間 mTLS — Go 後端 server 端（auth/registry/subscription/policy-engine 於 :9443 強制 mTLS，dual-listener 與 plain port 並存） | 高（已驗證；client 端尚未切換故未端到端強制） |
 | **P3-3b-1** ✅ | mTLS client — **gateway** 對 registry/policy-engine/subscription/auth 內部呼叫走 :9443（內部 host 白名單轉址 + client 憑證；JWKS/外部端點除外）。已捕捉 gateway→registry:9443 連線實證 | 高（已驗證；MTLS_ENABLED 開關） |
