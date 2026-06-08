@@ -414,9 +414,15 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
 - **AppRole**：policy `apim-svc`（最小授權：讀 secret/jwt、internal、database/creds、續租）
   + role `apim`（token_ttl 1h）。`vault read auth/approle/role/apim/role-id` 取 role_id。
 
-**待完成（staged，多服務變更，需排期）**：
-- 服務改用 **AppRole**：以 `VAULT_ROLE_ID`/`VAULT_SECRET_ID` 取代各服務的 root `VAULT_TOKEN`
-  （4 Go 服務 + audit-sink 的 vault client login 流程），登出 root token。
+**已完成（P3 Phase 3）服務改用 AppRole**：
+- 4 Go 服務（auth jwt client + 4 服務 vaultdb）以 `VAULT_ROLE_ID`/`VAULT_SECRET_ID`
+  做 AppRole 登入取得 **periodic token**（token_period=1h，背景 renew-self），取代 root
+  `VAULT_TOKEN`。policy `apim-svc` 最小授權（讀 jwt/internal/db-creds + 寫 jwt 供輪轉 +
+  renew-self）。AppRole 失敗自動 fallback root（漸進/回滾）。已驗證 AppRole login ok +
+  JWKS + DB 動態憑證正常。
+- root token 僅保留作 vault 管理 / break-glass（建議離線加密保管，不作運行使用）。
+
+**待完成（staged，需排期）**：
 - **Vault TLS**：`config.hcl` 設 `tls_cert_file`/`tls_key_file`（移除 tls_disable），
   所有 vault client 改 `https://vault:8200` + CA。
 - **Auto-unseal**：以 transit（第二 Vault）或雲 KMS 取代 Shamir 手動 unseal。
