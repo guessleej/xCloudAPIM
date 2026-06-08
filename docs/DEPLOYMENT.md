@@ -448,6 +448,8 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
   只改 compose env 而用舊映像會 `x509: unknown authority`。
 
 **待完成（同模式逐步進行，每步可回滾）**：
+- ✅ **mongodb**：Root-CA 憑證（mongo.pem + ca.crt）；analytics/notification 由 tlsInsecure 改
+  tlsCAFile=rootCA.crt（已驗證 MongoDB connected）。
 - postgres 其餘 client：flyway（JDBC truststore）、postgres-exporter、audit-sink（node pg）、pgadmin。
 - 其他 datastore：`gen-root-ca.sh redis|mongodb|kafka|elasticsearch` 重簽 → 各自 client 由
   `InsecureSkipVerify/tlsInsecure` 改 `RootCAs=rootCA.crt`+`ServerName`（逐一驗證）。
