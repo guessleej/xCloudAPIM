@@ -455,8 +455,12 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
 - ✅ **kafka**：以 Root CA 重簽 broker JKS keystore（含鏈）；7 個 client（Go kafka-go ×4 +
   Node kafkajs ×3）由 skip-verify 改帶 Root CA 驗證（已端到端驗證 login→audit_log）。
   注意：gen JKS 的 cp-kafka 需 `--user root` 才讀得到 600 的 rootCA.key。
-- redis（最後）：client 最多 + 6 節點 cluster bus 互信——`gen-root-ca.sh redis` 重簽 →
-  各 client `InsecureSkipVerify` 改帶 Root CA（逐一驗證）。
+- ⚠️ **redis（cluster bus 例外，verify-full 未採用）**：嘗試以 Root-CA 憑證後，**redis cluster
+  bus gossip（MEET）無法收斂**（節點互信在 CA 鏈驗證下握手成功卻不 join；自簽憑證 peer==同一張
+  則正常）。實測為 redis cluster TLS + 自訂 CA 的相容性限制。**已回滾為自簽憑證**：cluster 維持
+  加密（TLS）+ client `InsecureSkipVerify`（內網），cluster_state:ok。redis 的 Root-CA verify-full
+  待 redis 版本支援或改架構（如 cluster bus 用 redis.crt 作 ca、client 另路徑驗證）再評估。
+  教訓：改 redis cluster bus TLS 信任需重組 cluster（清資料卷=快取/session 失效）。
 - ✅ **vault**：重簽 Root-CA 憑證；4 服務 VAULT_SKIP_VERIFY→VAULT_CACERT（已驗證 AppRole over verified TLS）。
 - 對外端點若有公開網域 → ACME/Let's Encrypt（本部署為內網 IP，暫自簽）。
 
