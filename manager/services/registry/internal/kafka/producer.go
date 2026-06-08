@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,6 +14,21 @@ import (
 	"github.com/xcloudapim/registry-service/internal/domain"
 	"go.uber.org/zap"
 )
+
+// kafkaTLS：有 Root CA 則驗證 broker 憑證（verify-full，Phase 5）；否則 fallback skip-verify。
+func kafkaTLS() *tls.Config {
+	caPath := os.Getenv("KAFKA_SSL_CA")
+	if caPath == "" {
+		caPath = "/etc/pki/rootCA.crt"
+	}
+	if b, err := os.ReadFile(caPath); err == nil {
+		pool := x509.NewCertPool()
+		if pool.AppendCertsFromPEM(b) {
+			return &tls.Config{RootCAs: pool, ServerName: "kafka", MinVersion: tls.VersionTLS12}
+		}
+	}
+	return &tls.Config{InsecureSkipVerify: true} // #nosec G402 — CA 不存在時 fallback
+}
 
 type Producer struct {
 	writers map[string]*kafka.Writer
@@ -26,7 +42,7 @@ func kafkaTransport() *kafka.Transport {
 		return nil
 	}
 	return &kafka.Transport{
-		TLS:  &tls.Config{InsecureSkipVerify: true}, // #nosec G402 — 自簽憑證，內網
+		TLS:  kafkaTLS(),
 		SASL: plain.Mechanism{Username: user, Password: os.Getenv("KAFKA_SASL_PASSWORD")},
 	}
 }

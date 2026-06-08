@@ -5,6 +5,7 @@ package audit
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"os"
 	"strings"
@@ -14,6 +15,22 @@ import (
 	"github.com/segmentio/kafka-go/sasl/plain"
 	"go.uber.org/zap"
 )
+
+// kafkaTLS：有 Root CA（KAFKA_SSL_CA，預設 /etc/pki/rootCA.crt）則驗證 broker 憑證
+// （verify-full，Phase 5）；否則 fallback skip-verify（可回滾）。
+func kafkaTLS() *tls.Config {
+	caPath := os.Getenv("KAFKA_SSL_CA")
+	if caPath == "" {
+		caPath = "/etc/pki/rootCA.crt"
+	}
+	if b, err := os.ReadFile(caPath); err == nil {
+		pool := x509.NewCertPool()
+		if pool.AppendCertsFromPEM(b) {
+			return &tls.Config{RootCAs: pool, ServerName: "kafka", MinVersion: tls.VersionTLS12}
+		}
+	}
+	return &tls.Config{InsecureSkipVerify: true} // #nosec G402 — CA 不存在時 fallback
+}
 
 // Topic 稽核事件 topic（與 audit-sink AUDIT_TOPICS 一致）。
 const Topic = "auth.events"
@@ -47,7 +64,7 @@ func Init(logger *zap.Logger) {
 	}
 	if user := os.Getenv("KAFKA_SASL_USERNAME"); user != "" {
 		w.Transport = &kafka.Transport{
-			TLS:  &tls.Config{InsecureSkipVerify: true}, // #nosec G402 — 自簽憑證，內網
+			TLS:  kafkaTLS(),
 			SASL: plain.Mechanism{Username: user, Password: os.Getenv("KAFKA_SASL_PASSWORD")},
 		}
 	}

@@ -864,6 +864,8 @@ services:
         limits:
           cpus: '0.25'
           memory: 256M
+    volumes:
+      - ./infra/pki:/etc/pki:ro
     networks:
       - svc-net
       - data-net

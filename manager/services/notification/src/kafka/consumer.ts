@@ -9,10 +9,20 @@
  *   data:       { ... eventType-specific fields ... }
  * }
  */
+import { readFileSync } from 'node:fs'
 import { Kafka, type Consumer, logLevel } from 'kafkajs'
 import type { Logger } from 'pino'
 import { config } from '../config/index.js'
 import { getNotificationLogsCol } from '../store/mongodb.js'
+
+// 有 Root CA 則驗證 broker 憑證（verify-full，Phase 5）；否則 fallback skip-verify。
+const kafkaSsl = (() => {
+  try {
+    return { ca: [readFileSync(process.env['KAFKA_SSL_CA'] ?? '/etc/pki/rootCA.crt')] }
+  } catch {
+    return { rejectUnauthorized: false }
+  }
+})()
 import { sendEmail } from '../channels/email.js'
 import { sendWebhook } from '../channels/webhook.js'
 import { saveInApp } from '../channels/in-app.js'
@@ -38,7 +48,7 @@ export async function startKafkaConsumer(log: Logger): Promise<void> {
     logLevel: logLevel.WARN,
     // KAFKA_SASL_USERNAME 設定時改走 SASL_SSL（自簽憑證 → 不驗證 CA）
     ...(config.KAFKA_SASL_USERNAME ? {
-      ssl:  { rejectUnauthorized: false },
+      ssl:  kafkaSsl,
       sasl: { mechanism: 'plain' as const, username: config.KAFKA_SASL_USERNAME, password: config.KAFKA_SASL_PASSWORD },
     } : {}),
   })
