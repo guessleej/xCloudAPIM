@@ -549,9 +549,9 @@ services:
       - allowTLS
       - --tlsCertificateKeyFile
       - /etc/mongo-certs/mongo.pem
-      # MongoDB 7 要求啟用 TLS 時須指定信任鏈（SERVER-72839）；自簽憑證以自身作為 CA
+      # MongoDB 7 要求啟用 TLS 時須指定信任鏈（SERVER-72839）；改用統一 Root CA（Phase 5）
       - --tlsCAFile
-      - /etc/mongo-certs/mongo.crt
+      - /etc/mongo-certs/ca.crt
       - --tlsAllowConnectionsWithoutCertificates
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-apim_user}
@@ -781,7 +781,7 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       KAFKA_GROUP_ID:      analytics-service
       KAFKA_CLIENT_ID:     analytics-service
-      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin&tls=true&tlsInsecure=true
+      MONGO_URI:           mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/${MONGO_DB:-apim_analytics}?authSource=admin&tls=true&tlsCAFile=/etc/pki/rootCA.crt
       MONGO_DB:            ${MONGO_DB:-apim_analytics}
       REDIS_HOST:          redis-master-1
       REDIS_TLS:               "true"
@@ -810,6 +810,8 @@ services:
         limits:
           cpus: '0.5'
           memory: 512M
+    volumes:
+      - ./infra/pki:/etc/pki:ro
     networks:
       - svc-net
       - data-net
@@ -888,7 +890,7 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       KAFKA_GROUP_ID:        notification-service
       KAFKA_CLIENT_ID:       notification-service
-      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/apim_notifications?authSource=admin&tls=true&tlsInsecure=true
+      MONGO_URI:             mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:?MONGO_PASSWORD is required}@mongodb:27017/apim_notifications?authSource=admin&tls=true&tlsCAFile=/etc/pki/rootCA.crt
       MONGO_DB:              apim_notifications
       REDIS_HOST:            redis-master-1
       REDIS_PORT:            6379
@@ -923,6 +925,8 @@ services:
         limits:
           cpus: '0.25'
           memory: 256M
+    volumes:
+      - ./infra/pki:/etc/pki:ro
     networks:
       - svc-net
       - data-net
@@ -1271,7 +1275,7 @@ services:
       REDIS_HOST:         redis-master-1
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-      MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin&tls=true&tlsInsecure=true
+      MONGODB_URI:        mongodb://${MONGO_USER:-apim_user}:${MONGO_PASSWORD:-apim_mongo_dev}@mongodb:27017/apim_registry?authSource=admin&tls=true&tlsCAFile=/etc/pki/rootCA.crt
       ES_ADDRESSES:       https://elasticsearch:9200
       KAFKA_BROKERS:      kafka:9093
       KAFKA_SASL_USERNAME: apim

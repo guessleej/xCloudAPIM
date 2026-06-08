@@ -11,10 +11,12 @@ DS="${1:-postgres}"
 PKI="infra/pki"
 mkdir -p "$PKI"
 
-# datastore → 輸出目錄 / SAN / 檔名 / 擁有者 uid
+# datastore → 輸出目錄 / SAN / 檔名 / 擁有者 uid / 是否需合併 PEM
+PEM=""
 case "$DS" in
   postgres) OUT="infra/postgres/certs"; SAN="DNS:postgres,DNS:localhost,IP:127.0.0.1"; CRT="server.crt"; KEY="server.key"; UID_OWN="70" ;;
-  *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres）"; exit 1 ;;
+  mongodb)  OUT="infra/mongodb/certs";  SAN="DNS:mongodb,DNS:localhost,IP:127.0.0.1";  CRT="mongo.crt";  KEY="mongo.key";  UID_OWN="999"; PEM="mongo.pem" ;;
+  *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres / mongodb）"; exit 1 ;;
 esac
 mkdir -p "$OUT"
 
@@ -36,6 +38,13 @@ openssl x509 -req -in /tmp/s.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateseria
 chmod 644 /out/$CRT rootCA.crt
 chmod 600 /out/$KEY rootCA.key
 chown $UID_OWN:$UID_OWN /out/$CRT /out/$KEY
+# mongodb：產生合併 PEM（tlsCertificateKeyFile）+ 複製 Root CA 作 ca.crt（tlsCAFile）
+if [ -n '$PEM' ]; then
+  cat /out/$CRT /out/$KEY > /out/$PEM
+  cp rootCA.crt /out/ca.crt
+  chmod 600 /out/$PEM; chmod 644 /out/ca.crt
+  chown $UID_OWN:$UID_OWN /out/$PEM /out/ca.crt
+fi
 ls -l rootCA.crt /out/$CRT /out/$KEY
 "
 echo "✅ Root CA + $DS 憑證（由 Root CA 簽發）已產生"
