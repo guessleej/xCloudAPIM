@@ -151,7 +151,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/redis.crt
+      --tls-ca-cert-file /tls/ca.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -185,7 +185,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/redis.crt
+      --tls-ca-cert-file /tls/ca.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -219,7 +219,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/redis.crt
+      --tls-ca-cert-file /tls/ca.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -253,7 +253,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/redis.crt
+      --tls-ca-cert-file /tls/ca.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -281,7 +281,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/redis.crt
+      --tls-ca-cert-file /tls/ca.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -309,7 +309,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/redis.crt
+      --tls-ca-cert-file /tls/ca.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -1061,6 +1061,7 @@ services:
           memory: 256M
     volumes:
       - ./infra/mtls/certs:/etc/mtls:ro
+      - ./infra/pki:/etc/pki:ro
     networks:
       - app-net
       - svc-net
@@ -1548,10 +1549,13 @@ services:
     environment:
       REDIS_ADDR:     rediss://redis-master-1:6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-      REDIS_EXPORTER_SKIP_TLS_VERIFICATION: "true"
+      REDIS_EXPORTER_SKIP_TLS_VERIFICATION: "false"
+      REDIS_EXPORTER_TLS_CA_CERT_FILE: /etc/pki/rootCA.crt
     depends_on:
       redis-master-1:
         condition: service_healthy
+    volumes:
+      - ./infra/pki:/etc/pki:ro
     networks:
       - app-net
       - data-net

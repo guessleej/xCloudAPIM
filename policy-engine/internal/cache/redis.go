@@ -3,6 +3,7 @@ package cache
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 	"strings"
@@ -12,12 +13,23 @@ import (
 	"go.uber.org/zap"
 )
 
-// redisTLSConfig 在 REDIS_TLS=true 時回傳 TLS 設定（自簽憑證 → 跳過驗證）。
+// redisTLSConfig 在 REDIS_TLS=true 時回傳 TLS 設定。有 Root CA 則驗證鏈（Phase 5），
+// 否則 fallback skip-verify。
 func redisTLSConfig() *tls.Config {
-	if strings.EqualFold(os.Getenv("REDIS_TLS"), "true") {
-		return &tls.Config{InsecureSkipVerify: true} // #nosec G402 — 自簽憑證，內網
+	if !strings.EqualFold(os.Getenv("REDIS_TLS"), "true") {
+		return nil
 	}
-	return nil
+	caPath := os.Getenv("REDIS_CA")
+	if caPath == "" {
+		caPath = "/etc/pki/rootCA.crt"
+	}
+	if b, err := os.ReadFile(caPath); err == nil {
+		p := x509.NewCertPool()
+		if p.AppendCertsFromPEM(b) {
+			return &tls.Config{RootCAs: p, MinVersion: tls.VersionTLS12}
+		}
+	}
+	return &tls.Config{InsecureSkipVerify: true} // #nosec G402 — CA 不存在時 fallback
 }
 
 const (
