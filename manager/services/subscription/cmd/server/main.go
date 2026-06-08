@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/xcloudapim/subscription-service/internal/audit"
 	"github.com/xcloudapim/subscription-service/internal/cache"
 	"github.com/xcloudapim/subscription-service/internal/config"
 	grpcserver "github.com/xcloudapim/subscription-service/internal/grpc"
@@ -34,6 +35,10 @@ func main() {
 
 	log := initLogger(cfg.Server.Environment)
 	defer log.Sync() //nolint:errcheck
+
+	// ─── 稽核事件 Publisher（P3-1，best-effort）────────────────
+	audit.Init(log)
+	defer audit.Close()
 
 	// ─── PostgreSQL ───────────────────────────────────────────
 	db, err := repository.NewDB(cfg.Postgres.DSN, cfg.Postgres.MaxConns)

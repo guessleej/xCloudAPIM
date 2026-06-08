@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xcloudapim/subscription-service/internal/audit"
 	"github.com/xcloudapim/subscription-service/internal/domain"
 	"github.com/xcloudapim/subscription-service/internal/service"
 )
@@ -45,6 +46,7 @@ func (h *APIKeyHandler) Create(c *gin.Context) {
 		}
 		return
 	}
+	audit.Emit("apikey_created", userID, c.ClientIP(), map[string]any{"subscription_id": subID, "org_id": orgID})
 	// PlainKey 只在此次回傳，提示使用者存好
 	c.JSON(http.StatusCreated, key)
 }
@@ -81,6 +83,7 @@ func (h *APIKeyHandler) Revoke(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errResp(err))
 		return
 	}
+	audit.Emit("apikey_revoked", userID, c.ClientIP(), map[string]any{"key_id": c.Param("key_id"), "subscription_id": c.Param("id")})
 	c.Status(http.StatusNoContent)
 }
 

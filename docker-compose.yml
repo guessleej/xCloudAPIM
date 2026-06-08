@@ -1315,6 +1315,9 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-policy-engine
     environment:
+      KAFKA_BROKERS:       kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       MTLS_ENABLED:       ${MTLS_ENABLED:-false}
       MTLS_PORT:          "9443"
       VAULT_ADDR:         http://vault:8200
@@ -1332,7 +1335,6 @@ services:
       REDIS_TLS:               "true"
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
-      KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
       REGISTRY_SERVICE_URL: http://registry-service:8082
       OTEL_EXPORTER_OTLP_ENDPOINT: http://jaeger:4318
@@ -1384,6 +1386,9 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-subscription
     environment:
+      KAFKA_BROKERS:       kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       MTLS_ENABLED:       ${MTLS_ENABLED:-false}
       MTLS_PORT:          "9443"
       VAULT_ADDR:         http://vault:8200
@@ -1402,7 +1407,6 @@ services:
       REDIS_PORT:         6379
       REDIS_PASSWORD:     ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       REDIS_DB:           0
-      KAFKA_BROKERS:      kafka:9092
       KAFKA_TOPIC_PREFIX: apim
       AUTH_SERVICE_URL:   http://auth-service:8081
       REGISTRY_SERVICE_URL: http://registry-service:8082

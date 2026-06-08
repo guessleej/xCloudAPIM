@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xcloudapim/subscription-service/internal/audit"
 	"github.com/xcloudapim/subscription-service/internal/domain"
 	"github.com/xcloudapim/subscription-service/internal/service"
 )
@@ -65,6 +66,7 @@ func (h *SubscriptionHandler) Create(c *gin.Context) {
 		}
 		return
 	}
+	audit.Emit("subscription_created", userID, c.ClientIP(), map[string]any{"org_id": orgID})
 	c.JSON(http.StatusCreated, sub)
 }
 
@@ -103,6 +105,7 @@ func (h *SubscriptionHandler) Approve(c *gin.Context) {
 		h.handleSubError(c, err)
 		return
 	}
+	audit.Emit("subscription_approved", approverID, c.ClientIP(), map[string]any{"subscription_id": c.Param("id")})
 	c.Status(http.StatusNoContent)
 }
 
@@ -119,6 +122,7 @@ func (h *SubscriptionHandler) Cancel(c *gin.Context) {
 		h.handleSubError(c, err)
 		return
 	}
+	audit.Emit("subscription_cancelled", c.GetHeader("X-User-ID"), c.ClientIP(), map[string]any{"subscription_id": c.Param("id")})
 	c.Status(http.StatusNoContent)
 }
 

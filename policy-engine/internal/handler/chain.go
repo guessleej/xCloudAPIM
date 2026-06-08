@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/xcloudapim/policy-engine/internal/audit"
 	"github.com/xcloudapim/policy-engine/internal/domain"
 	"go.uber.org/zap"
 )
@@ -101,6 +102,7 @@ func (h *Handlers) CreateChain(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal error"})
 		return
 	}
+	audit.Emit("chain_created", userID, c.ClientIP(), map[string]any{"org_id": orgID})
 	c.JSON(http.StatusCreated, chain)
 }
 
@@ -144,6 +146,7 @@ func (h *Handlers) PublishChain(c *gin.Context) {
 		}
 		return
 	}
+	audit.Emit("chain_published", userID, c.ClientIP(), map[string]any{"chain_id": c.Param("id")})
 	c.JSON(http.StatusOK, chain)
 }
 
@@ -158,6 +161,7 @@ func (h *Handlers) DeleteChain(c *gin.Context) {
 		}
 		return
 	}
+	audit.Emit("chain_deleted", c.GetHeader("X-User-ID"), c.ClientIP(), map[string]any{"chain_id": c.Param("id")})
 	c.Status(http.StatusNoContent)
 }
 

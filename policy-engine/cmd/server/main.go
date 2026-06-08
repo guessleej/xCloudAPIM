@@ -16,6 +16,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"github.com/xcloudapim/policy-engine/internal/audit"
 	"github.com/xcloudapim/policy-engine/internal/compiler"
 	"github.com/xcloudapim/policy-engine/internal/config"
 	"github.com/xcloudapim/policy-engine/internal/executor"
@@ -48,6 +49,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("load config", zap.Error(err))
 	}
+
+	// ─── 稽核事件 Publisher（P3-1，best-effort）────────────────
+	audit.Init(logger)
+	defer audit.Close()
 
 	// ─── PostgreSQL ───────────────────────────────────────────
 	db, err := repository.NewDB(cfg.Postgres.DSN, cfg.Postgres.MaxConns, cfg.Postgres.MinConns, logger)
