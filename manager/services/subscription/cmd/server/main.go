@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"fmt"
 	"net/http"
 	"os"
@@ -51,17 +50,7 @@ func main() {
 	// ─── Redis ────────────────────────────────────────────────
 	var redisTLS *tls.Config
 	if strings.EqualFold(os.Getenv("REDIS_TLS"), "true") {
-		redisTLS = &tls.Config{InsecureSkipVerify: true} // #nosec G402 — fallback
-		caPath := os.Getenv("REDIS_CA")
-		if caPath == "" {
-			caPath = "/etc/pki/rootCA.crt"
-		}
-		if b, rerr := os.ReadFile(caPath); rerr == nil {
-			p := x509.NewCertPool()
-			if p.AppendCertsFromPEM(b) {
-				redisTLS = &tls.Config{RootCAs: p, MinVersion: tls.VersionTLS12} // Phase 5 鏈驗證
-			}
-		}
+		redisTLS = &tls.Config{InsecureSkipVerify: true} // #nosec G402 — 自簽憑證，內網
 	}
 	rdb := redis.NewClient(&redis.Options{
 		Addr:      cfg.Redis.Addr,

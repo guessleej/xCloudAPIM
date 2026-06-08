@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs'
 import Fastify from 'fastify'
 import helmet from '@fastify/helmet'
 import underPressure from '@fastify/under-pressure'
@@ -6,15 +5,6 @@ import { pino } from 'pino'
 import { Redis } from 'ioredis'
 import { register as promRegister } from 'prom-client'
 import { config } from './config/index.js'
-
-// 有 Root CA 則驗證 redis 憑證鏈（verify-full，Phase 5）；否則 fallback skip-verify。
-const redisTls = (() => {
-  try {
-    return { tls: { ca: [readFileSync(process.env['REDIS_CA'] ?? '/etc/pki/rootCA.crt')] } }
-  } catch {
-    return { tls: { rejectUnauthorized: false } }
-  }
-})()
 import { connectMongo, closeMongo } from './store/mongodb.js'
 import { startKafkaConsumer, stopKafkaConsumer } from './kafka/consumer.js'
 import { registerRoutes } from './http/routes.js'
@@ -31,8 +21,8 @@ async function main(): Promise<void> {
     password: config.REDIS_PASSWORD || undefined,
     db:       config.REDIS_DB,
     lazyConnect: true,
-    // REDIS_TLS=true 時以 TLS 連線（有 Root CA 則鏈驗證，Phase 5）
-    ...(config.REDIS_TLS ? redisTls : {}),
+    // REDIS_TLS=true 時以 TLS 連線；自簽憑證 → 不驗證 CA
+    ...(config.REDIS_TLS ? { tls: { rejectUnauthorized: false } } : {}),
   })
   await redis.connect()
   log.info('Redis connected')
