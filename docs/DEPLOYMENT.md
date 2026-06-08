@@ -453,7 +453,7 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
 - postgres 其餘 client：flyway（JDBC truststore）、postgres-exporter、audit-sink（node pg）、pgadmin。
 - 其他 datastore：`gen-root-ca.sh redis|mongodb|kafka|elasticsearch` 重簽 → 各自 client 由
   `InsecureSkipVerify/tlsInsecure` 改 `RootCAs=rootCA.crt`+`ServerName`（逐一驗證）。
-- vault：`VAULT_SKIP_VERIFY=true` → `VAULT_CACERT=rootCA.crt`（重簽 vault 憑證為 Root-CA）。
+- ✅ **vault**：重簽 Root-CA 憑證；4 服務 VAULT_SKIP_VERIFY→VAULT_CACERT（已驗證 AppRole over verified TLS）。
 - 對外端點若有公開網域 → ACME/Let's Encrypt（本部署為內網 IP，暫自簽）。
 
 ## 9. 疑難排解（首次部署常見坑）
