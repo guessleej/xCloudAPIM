@@ -1192,6 +1192,8 @@ services:
       VAULT_ADDR:         http://vault:8200
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
+      VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID:    ${VAULT_SECRET_ID:-}
       JWT_AUTO_ROTATE:        ${JWT_AUTO_ROTATE:-false}
       JWT_ROTATION_INTERVAL:  ${JWT_ROTATION_INTERVAL:-168h}
       SMTP_HOST:          mailhog
@@ -1248,6 +1250,8 @@ services:
       VAULT_ADDR:         http://vault:8200
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
+      VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID:    ${VAULT_SECRET_ID:-}
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8082
       POSTGRES_HOST:      postgres
@@ -1323,6 +1327,8 @@ services:
       VAULT_ADDR:         http://vault:8200
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
+      VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID:    ${VAULT_SECRET_ID:-}
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8083
       POSTGRES_HOST:      postgres
@@ -1394,6 +1400,8 @@ services:
       VAULT_ADDR:         http://vault:8200
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
+      VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
+      VAULT_SECRET_ID:    ${VAULT_SECRET_ID:-}
       APP_ENV:            ${NODE_ENV:-production}
       PORT:               8084
       POSTGRES_HOST:      postgres

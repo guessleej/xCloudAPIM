@@ -156,13 +156,16 @@ vault audit enable file file_path=/vault/data/vault-audit.log 2>/dev/null \
 echo "▶ Setting up AppRole..."
 vault auth enable approle 2>/dev/null || echo "ℹ️  approle already enabled"
 vault policy write apim-svc - <<'POLICY'
-path "secret/data/jwt"         { capabilities = ["read"] }
+# auth JWT 金鑰：讀取 + 輪轉寫入（RotateJWTKey）
+path "secret/data/jwt"         { capabilities = ["read", "create", "update"] }
 path "secret/data/internal"    { capabilities = ["read"] }
 path "database/creds/apim-dyn" { capabilities = ["read"] }
 path "sys/leases/renew"        { capabilities = ["update"] }
+path "auth/token/renew-self"   { capabilities = ["update"] }
 POLICY
+# periodic token（token_period）：可無限續租、無 max_ttl，適合長駐服務
 vault write auth/approle/role/apim \
-  token_policies=apim-svc token_ttl=1h token_max_ttl=4h secret_id_ttl=720h >/dev/null
+  token_policies=apim-svc token_period=1h secret_id_ttl=0 >/dev/null
 echo "✅ AppRole 'apim' created（role_id: vault read auth/approle/role/apim/role-id）"
 echo "ℹ️  服務遷移：以 VAULT_ROLE_ID/VAULT_SECRET_ID 取代 VAULT_TOKEN（見 DEPLOYMENT §8.10）"
 

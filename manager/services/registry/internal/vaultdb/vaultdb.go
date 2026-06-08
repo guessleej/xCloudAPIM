@@ -54,7 +54,6 @@ func NewConnector(log *zap.Logger) (*Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("vault client: %w", err)
 	}
-	vc.SetToken(os.Getenv("VAULT_TOKEN"))
 
 	host := getenv("POSTGRES_HOST", "postgres")
 	port := getenv("POSTGRES_PORT", "5432")
@@ -71,11 +70,67 @@ func NewConnector(log *zap.Logger) (*Manager, error) {
 		log:       log,
 		stop:      make(chan struct{}),
 	}
+	if err := m.vaultLogin(); err != nil {
+		return nil, err
+	}
 	if err := m.refresh(); err != nil {
 		return nil, err
 	}
 	go m.renewLoop()
 	return m, nil
+}
+
+// vaultLogin 取得 Vault token：有 VAULT_ROLE_ID/VAULT_SECRET_ID 則走 AppRole（並啟動
+// token 續租），否則沿用 VAULT_TOKEN。AppRole 失敗時 fallback root token（漸進遷移）。
+func (m *Manager) vaultLogin() error {
+	roleID := os.Getenv("VAULT_ROLE_ID")
+	secretID := os.Getenv("VAULT_SECRET_ID")
+	if roleID == "" || secretID == "" {
+		m.vc.SetToken(os.Getenv("VAULT_TOKEN"))
+		return nil
+	}
+	if err := m.appRoleLogin(roleID, secretID); err != nil {
+		if t := os.Getenv("VAULT_TOKEN"); t != "" {
+			m.log.Warn("AppRole login failed, falling back to VAULT_TOKEN", zap.Error(err))
+			m.vc.SetToken(t)
+			return nil
+		}
+		return err
+	}
+	go m.tokenRenewLoop(roleID, secretID)
+	return nil
+}
+
+func (m *Manager) appRoleLogin(roleID, secretID string) error {
+	sec, err := m.vc.Logical().Write("auth/approle/login", map[string]interface{}{
+		"role_id": roleID, "secret_id": secretID,
+	})
+	if err != nil {
+		return err
+	}
+	if sec == nil || sec.Auth == nil || sec.Auth.ClientToken == "" {
+		return fmt.Errorf("approle login: empty token")
+	}
+	m.vc.SetToken(sec.Auth.ClientToken)
+	m.log.Info("vault AppRole login ok", zap.Int("token_ttl_s", sec.Auth.LeaseDuration))
+	return nil
+}
+
+// tokenRenewLoop 定期 renew-self 維持 periodic token；失敗則重新 AppRole 登入。
+func (m *Manager) tokenRenewLoop(roleID, secretID string) {
+	for {
+		select {
+		case <-m.stop:
+			return
+		case <-time.After(30 * time.Minute):
+		}
+		if _, err := m.vc.Auth().Token().RenewSelf(0); err != nil {
+			m.log.Warn("vault token renew-self failed, re-login", zap.Error(err))
+			if lerr := m.appRoleLogin(roleID, secretID); lerr != nil {
+				m.log.Error("vault AppRole re-login failed", zap.Error(lerr))
+			}
+		}
+	}
 }
 
 // Connect 實作 driver.Connector：以當下的動態帳密撥接。

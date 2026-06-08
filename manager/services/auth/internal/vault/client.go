@@ -10,6 +10,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"math/big"
+	"os"
 	"sync"
 	"time"
 
@@ -45,14 +46,58 @@ func NewClient(addr, token, jwtSecretPath string, logger *zap.Logger) (*Client, 
 	if err != nil {
 		return nil, fmt.Errorf("create vault client: %w", err)
 	}
-	vc.SetToken(token)
 
-	return &Client{
+	c := &Client{
 		vc:            vc,
 		jwtSecretPath: jwtSecretPath,
 		logger:        logger,
 		cacheTTL:      5 * time.Minute,
-	}, nil
+	}
+	c.vaultLogin(token)
+	return c, nil
+}
+
+// vaultLogin 取得 token：有 VAULT_ROLE_ID/VAULT_SECRET_ID 走 AppRole（並背景續租），
+// 否則用傳入的 static token；AppRole 失敗則 fallback static token（漸進遷移）。
+func (c *Client) vaultLogin(staticToken string) {
+	roleID := os.Getenv("VAULT_ROLE_ID")
+	secretID := os.Getenv("VAULT_SECRET_ID")
+	if roleID == "" || secretID == "" {
+		c.vc.SetToken(staticToken)
+		return
+	}
+	if err := c.appRoleLogin(roleID, secretID); err != nil {
+		c.logger.Warn("AppRole login failed, falling back to VAULT_TOKEN", zap.Error(err))
+		c.vc.SetToken(staticToken)
+		return
+	}
+	go c.tokenRenewLoop(roleID, secretID)
+}
+
+func (c *Client) appRoleLogin(roleID, secretID string) error {
+	sec, err := c.vc.Logical().Write("auth/approle/login", map[string]interface{}{
+		"role_id": roleID, "secret_id": secretID,
+	})
+	if err != nil {
+		return err
+	}
+	if sec == nil || sec.Auth == nil || sec.Auth.ClientToken == "" {
+		return fmt.Errorf("approle login: empty token")
+	}
+	c.vc.SetToken(sec.Auth.ClientToken)
+	c.logger.Info("vault AppRole login ok (jwt client)", zap.Int("token_ttl_s", sec.Auth.LeaseDuration))
+	return nil
+}
+
+func (c *Client) tokenRenewLoop(roleID, secretID string) {
+	t := time.NewTicker(30 * time.Minute)
+	defer t.Stop()
+	for range t.C {
+		if _, err := c.vc.Auth().Token().RenewSelf(0); err != nil {
+			c.logger.Warn("vault token renew-self failed, re-login", zap.Error(err))
+			_ = c.appRoleLogin(roleID, secretID)
+		}
+	}
 }
 
 // GetJWTKeyPair 從 Vault 取得 JWT RSA Key Pair（含本地快取）
