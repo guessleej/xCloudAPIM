@@ -11,13 +11,14 @@ DS="${1:-postgres}"
 PKI="infra/pki"
 mkdir -p "$PKI"
 
-# datastore → 輸出目錄 / SAN / 檔名 / 擁有者 uid / 是否需合併 PEM
-PEM=""
+# datastore → 輸出目錄 / SAN / 檔名 / 擁有者 uid / 合併 PEM / 是否複製 ca.crt
+PEM=""; CACP=""
 case "$DS" in
-  postgres) OUT="infra/postgres/certs"; SAN="DNS:postgres,DNS:localhost,IP:127.0.0.1"; CRT="server.crt"; KEY="server.key"; UID_OWN="70" ;;
-  mongodb)  OUT="infra/mongodb/certs";  SAN="DNS:mongodb,DNS:localhost,IP:127.0.0.1";  CRT="mongo.crt";  KEY="mongo.key";  UID_OWN="999"; PEM="mongo.pem" ;;
-  vault)    OUT="infra/vault/tls";      SAN="DNS:vault,DNS:localhost,IP:127.0.0.1";    CRT="vault.crt";  KEY="vault.key";  UID_OWN="0" ;;
-  *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres / mongodb / vault）"; exit 1 ;;
+  postgres)      OUT="infra/postgres/certs";      SAN="DNS:postgres,DNS:localhost,IP:127.0.0.1";      CRT="server.crt"; KEY="server.key"; UID_OWN="70" ;;
+  mongodb)       OUT="infra/mongodb/certs";       SAN="DNS:mongodb,DNS:localhost,IP:127.0.0.1";       CRT="mongo.crt";  KEY="mongo.key";  UID_OWN="999"; PEM="mongo.pem"; CACP="1" ;;
+  vault)         OUT="infra/vault/tls";           SAN="DNS:vault,DNS:localhost,IP:127.0.0.1";         CRT="vault.crt";  KEY="vault.key";  UID_OWN="0" ;;
+  elasticsearch) OUT="infra/elasticsearch/certs"; SAN="DNS:elasticsearch,DNS:localhost,IP:127.0.0.1"; CRT="es.crt";     KEY="es.key";     UID_OWN="1000"; CACP="1" ;;
+  *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres / mongodb / vault / elasticsearch）"; exit 1 ;;
 esac
 mkdir -p "$OUT"
 
@@ -39,12 +40,15 @@ openssl x509 -req -in /tmp/s.csr -CA rootCA.crt -CAkey rootCA.key -CAcreateseria
 chmod 644 /out/$CRT rootCA.crt
 chmod 600 /out/$KEY rootCA.key
 chown $UID_OWN:$UID_OWN /out/$CRT /out/$KEY
-# mongodb：產生合併 PEM（tlsCertificateKeyFile）+ 複製 Root CA 作 ca.crt（tlsCAFile）
+# 合併 PEM（mongodb tlsCertificateKeyFile）
 if [ -n '$PEM' ]; then
   cat /out/$CRT /out/$KEY > /out/$PEM
+  chmod 600 /out/$PEM; chown $UID_OWN:$UID_OWN /out/$PEM
+fi
+# 複製 Root CA 作 ca.crt（mongodb tlsCAFile / elasticsearch+kibana CA）
+if [ -n '$CACP' ]; then
   cp rootCA.crt /out/ca.crt
-  chmod 600 /out/$PEM; chmod 644 /out/ca.crt
-  chown $UID_OWN:$UID_OWN /out/$PEM /out/ca.crt
+  chmod 644 /out/ca.crt; chown $UID_OWN:$UID_OWN /out/ca.crt
 fi
 ls -l rootCA.crt /out/$CRT /out/$KEY
 "
