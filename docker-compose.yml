@@ -487,16 +487,18 @@ services:
     command: ["exec vault server -config=/vault/config/config.hcl"]
     user: "0"   # run as root so vault can write to the data volume
     environment:
-      VAULT_ADDR: http://127.0.0.1:8200
+      VAULT_ADDR: https://127.0.0.1:8200
+      VAULT_SKIP_VERIFY:  "true"
     cap_add:
       - IPC_LOCK
     volumes:
       - vault-data:/vault/data
       - ./infra/vault/config.hcl:/vault/config/config.hcl:ro
+      - ./infra/vault/tls:/vault/tls:ro
     ports:
       - "127.0.0.1:8200:8200"
     healthcheck:
-      test: ["CMD-SHELL", "vault status -address=http://127.0.0.1:8200 2>&1 | grep -qE 'Initialized|sealed'"]
+      test: ["CMD-SHELL", "vault status -tls-skip-verify 2>&1 | grep -qE 'Initialized|sealed'"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -510,7 +512,8 @@ services:
     container_name: apim-vault-init
     entrypoint: ["sh", "-c", "command -v openssl >/dev/null || apk add --no-cache openssl; sh /scripts/vault-prod-init.sh"]
     environment:
-      VAULT_ADDR:              http://vault:8200
+      VAULT_ADDR:              https://vault:8200
+      VAULT_SKIP_VERIFY:  "true"
       VAULT_TOKEN:             ${VAULT_TOKEN:-}
       POSTGRES_HOST:           postgres
       POSTGRES_DB:             ${POSTGRES_DB:-apim}
@@ -1189,7 +1192,8 @@ services:
       JWT_REFRESH_TTL:    ${JWT_REFRESH_TTL:-168h}
       OAUTH2_ISSUER:      ${OAUTH2_ISSUER:-http://localhost/api/auth}
       AUTH_CORS_ALLOWED_ORIGINS: ${AUTH_CORS_ALLOWED_ORIGINS:-http://localhost:3001,http://localhost:5173}
-      VAULT_ADDR:         http://vault:8200
+      VAULT_ADDR:         https://vault:8200
+      VAULT_SKIP_VERIFY:  "true"
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
@@ -1247,7 +1251,8 @@ services:
     environment:
       MTLS_ENABLED:       ${MTLS_ENABLED:-false}
       MTLS_PORT:          "9443"
-      VAULT_ADDR:         http://vault:8200
+      VAULT_ADDR:         https://vault:8200
+      VAULT_SKIP_VERIFY:  "true"
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
@@ -1324,7 +1329,8 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       MTLS_ENABLED:       ${MTLS_ENABLED:-false}
       MTLS_PORT:          "9443"
-      VAULT_ADDR:         http://vault:8200
+      VAULT_ADDR:         https://vault:8200
+      VAULT_SKIP_VERIFY:  "true"
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}
@@ -1397,7 +1403,8 @@ services:
       KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       MTLS_ENABLED:       ${MTLS_ENABLED:-false}
       MTLS_PORT:          "9443"
-      VAULT_ADDR:         http://vault:8200
+      VAULT_ADDR:         https://vault:8200
+      VAULT_SKIP_VERIFY:  "true"
       VAULT_TOKEN:        ${VAULT_TOKEN:?VAULT_TOKEN is required}
       VAULT_DB_CREDS:     ${VAULT_DB_CREDS:-false}
       VAULT_ROLE_ID:      ${VAULT_ROLE_ID:-}

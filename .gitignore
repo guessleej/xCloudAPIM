@@ -60,3 +60,4 @@ infra/kafka/secrets/
 mise.toml
 infra/mtls/certs/
 backups/
+infra/vault/tls/
