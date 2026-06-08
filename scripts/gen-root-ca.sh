@@ -28,7 +28,7 @@ if [ "$DS" = "kafka" ]; then
   [ -f "$PKI/rootCA.crt" ] || { echo "❌ 請先以其他 datastore 產生 Root CA（infra/pki/rootCA.{crt,key}）"; exit 1; }
   KPW="${KAFKA_SSL_PASSWORD:-$(grep -E '^KAFKA_SSL_PASSWORD=' .env 2>/dev/null | cut -d= -f2)}"
   [ -n "$KPW" ] || { echo "❌ 需 KAFKA_SSL_PASSWORD（.env 或環境變數）"; exit 1; }
-  docker run --rm -e KPW="$KPW" -v "$PWD/$PKI:/pki" -v "$PWD/$OUT:/w" confluentinc/cp-kafka:7.6.0 bash -c '
+  docker run --rm --user root -e KPW="$KPW" -v "$PWD/$PKI:/pki" -v "$PWD/$OUT:/w" confluentinc/cp-kafka:7.6.0 bash -c '
     set -e; cd /w
     openssl req -nodes -newkey rsa:2048 -keyout kafka.key -out kafka.csr -subj /CN=kafka 2>/dev/null
     printf "subjectAltName=DNS:kafka,DNS:localhost,IP:127.0.0.1\nextendedKeyUsage=serverAuth\n" > k.ext
