@@ -434,13 +434,25 @@ sh scripts/gen-mtls-certs.sh          # 產生內部 CA + 共用服務憑證 →
   vault 本身仍需解封（僅搬移問題）。本內網主機無 KMS，故**保留 Shamir 手動解封**
   （unseal keys 離線加密備份），待具備 KMS 時導入 seal "awskms"/"gcpckms" 區塊。
 
-## 8.11 正式 CA / PKI（待完成）
+## 8.11 正式 Root CA + verify-full（P3 Phase 5，逐 datastore 進行中）
 
-目前 TLS 憑證為自簽（資料層 `sslmode=require` + `rejectUnauthorized:false`；mTLS 用內部 CA）。
-到生產 100% 需：
-- 統一 **內部 Root CA**（離線保管私鑰）簽發所有服務/資料層憑證；資料層 client 改
-  `verify-full` / `rejectUnauthorized:true` 驗證鏈（逐服務驗證，避免 SAN/CA 不符中斷連線）。
-- 對外端點若有公開網域 → 以 **ACME/Let's Encrypt** 取得公信憑證（本部署為內網 IP，暫用自簽）。
+統一內部 **Root CA**：`scripts/gen-root-ca.sh <datastore>` 建立 `infra/pki/{rootCA.crt,rootCA.key}`
+（key 機密，gitignored；離線保管）並逐 datastore 簽發伺服器憑證（SAN 正確）。
+
+**已完成（postgres）**：
+- postgres 重簽為 Root-CA 憑證（`pg_reload_conf` 熱載，免重啟）；驗證 `Verify return code: 0`。
+- **4 個 Go 服務（auth/registry/subscription/policy-engine）postgres 連線改 verify-full**
+  （`POSTGRES_SSL_MODE=verify-full` + `POSTGRES_SSL_ROOT_CERT=/etc/pki/rootCA.crt`，掛載
+  `./infra/pki:/etc/pki`）。已上線驗證鏈驗證成功、動態憑證正常。
+- ⚠️ 教訓：改 verify-full 必須**同時 rebuild 服務映像**（vaultdb 需新增 sslrootcert 支援），
+  只改 compose env 而用舊映像會 `x509: unknown authority`。
+
+**待完成（同模式逐步進行，每步可回滾）**：
+- postgres 其餘 client：flyway（JDBC truststore）、postgres-exporter、audit-sink（node pg）、pgadmin。
+- 其他 datastore：`gen-root-ca.sh redis|mongodb|kafka|elasticsearch` 重簽 → 各自 client 由
+  `InsecureSkipVerify/tlsInsecure` 改 `RootCAs=rootCA.crt`+`ServerName`（逐一驗證）。
+- vault：`VAULT_SKIP_VERIFY=true` → `VAULT_CACERT=rootCA.crt`（重簽 vault 憑證為 Root-CA）。
+- 對外端點若有公開網域 → ACME/Let's Encrypt（本部署為內網 IP，暫自簽）。
 
 ## 9. 疑難排解（首次部署常見坑）
 
