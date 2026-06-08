@@ -18,7 +18,7 @@ case "$DS" in
   mongodb)       OUT="infra/mongodb/certs";       SAN="DNS:mongodb,DNS:localhost,IP:127.0.0.1";       CRT="mongo.crt";  KEY="mongo.key";  UID_OWN="999"; PEM="mongo.pem"; CACP="1" ;;
   vault)         OUT="infra/vault/tls";           SAN="DNS:vault,DNS:localhost,IP:127.0.0.1";         CRT="vault.crt";  KEY="vault.key";  UID_OWN="0" ;;
   elasticsearch) OUT="infra/elasticsearch/certs"; SAN="DNS:elasticsearch,DNS:localhost,IP:127.0.0.1"; CRT="es.crt";     KEY="es.key";     UID_OWN="1000"; CACP="1" ;;
-  redis)         OUT="infra/redis/certs"; SAN="DNS:redis-master-1,DNS:redis-master-2,DNS:redis-master-3,DNS:redis-replica-1,DNS:redis-replica-2,DNS:redis-replica-3,DNS:localhost,IP:127.0.0.1"; CRT="redis.crt"; KEY="redis.key"; UID_OWN="999"; CACP="1" ;;
+  redis)         OUT="infra/redis/certs"; SAN="DNS:redis-master-1,DNS:redis-master-2,DNS:redis-master-3,DNS:redis-replica-1,DNS:redis-replica-2,DNS:redis-replica-3,DNS:localhost,IP:127.0.0.1,IP:172.28.40.21,IP:172.28.40.22,IP:172.28.40.23,IP:172.28.40.24,IP:172.28.40.25,IP:172.28.40.26"; CRT="redis.crt"; KEY="redis.key"; UID_OWN="999"; CACP="1" ;;
   kafka)         OUT="infra/kafka/secrets" ;; # 特殊路徑（JKS，見下）
   *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres / mongodb / vault / elasticsearch / kafka）"; exit 1 ;;
 esac
