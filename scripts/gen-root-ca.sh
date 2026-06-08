@@ -16,7 +16,8 @@ PEM=""
 case "$DS" in
   postgres) OUT="infra/postgres/certs"; SAN="DNS:postgres,DNS:localhost,IP:127.0.0.1"; CRT="server.crt"; KEY="server.key"; UID_OWN="70" ;;
   mongodb)  OUT="infra/mongodb/certs";  SAN="DNS:mongodb,DNS:localhost,IP:127.0.0.1";  CRT="mongo.crt";  KEY="mongo.key";  UID_OWN="999"; PEM="mongo.pem" ;;
-  *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres / mongodb）"; exit 1 ;;
+  vault)    OUT="infra/vault/tls";      SAN="DNS:vault,DNS:localhost,IP:127.0.0.1";    CRT="vault.crt";  KEY="vault.key";  UID_OWN="0" ;;
+  *) echo "❌ 尚未支援的 datastore: $DS（目前：postgres / mongodb / vault）"; exit 1 ;;
 esac
 mkdir -p "$OUT"
 
