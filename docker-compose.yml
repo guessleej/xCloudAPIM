@@ -151,7 +151,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/ca.crt
+      --tls-ca-cert-file /tls/redis.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -185,7 +185,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/ca.crt
+      --tls-ca-cert-file /tls/redis.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -219,7 +219,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/ca.crt
+      --tls-ca-cert-file /tls/redis.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -253,7 +253,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/ca.crt
+      --tls-ca-cert-file /tls/redis.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -281,7 +281,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/ca.crt
+      --tls-ca-cert-file /tls/redis.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
@@ -309,7 +309,7 @@ services:
       --tls-port 6379
       --tls-cert-file /tls/redis.crt
       --tls-key-file /tls/redis.key
-      --tls-ca-cert-file /tls/ca.crt
+      --tls-ca-cert-file /tls/redis.crt
       --tls-cluster yes
       --tls-replication yes
       --tls-auth-clients no
