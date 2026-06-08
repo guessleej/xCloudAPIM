@@ -59,8 +59,13 @@ func NewConnector(log *zap.Logger) (*Manager, error) {
 	port := getenv("POSTGRES_PORT", "5432")
 	dbname := getenv("POSTGRES_DB", "apim")
 	ssl := getenv("POSTGRES_SSL_MODE", "require")
+	sslRoot := os.Getenv("POSTGRES_SSL_ROOT_CERT") // 設定時啟用 verify-full 鏈驗證（Phase 5）
 	baseDSN := func(u, p string) string {
-		return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, u, p, dbname, ssl)
+		dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", host, port, u, p, dbname, ssl)
+		if sslRoot != "" {
+			dsn += " sslrootcert=" + sslRoot
+		}
+		return dsn
 	}
 
 	m := &Manager{
