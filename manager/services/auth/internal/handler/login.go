@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/xcloudapim/auth-service/internal/audit"
 	"github.com/xcloudapim/auth-service/internal/service"
 	"go.uber.org/zap"
 )
@@ -30,12 +31,17 @@ func (h *Handlers) Login(c *gin.Context) {
 	token, user, err := h.sessionService.Login(c.Request.Context(), body.Email, body.Password)
 	if err != nil {
 		h.logger.Warn("login failed", zap.String("email", body.Email), zap.Error(err))
+		audit.Emit("login_failed", body.Email, c.ClientIP(), map[string]any{"result": "failure"})
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"error":             "invalid_credentials",
 			"error_description": "invalid email or password",
 		})
 		return
 	}
+
+	audit.Emit("login", user.Email, c.ClientIP(), map[string]any{
+		"result": "success", "user_id": user.ID.String(), "org_id": uuidString(user.OrgID),
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"session_token": token,
@@ -87,6 +93,10 @@ func (h *Handlers) Register(c *gin.Context) {
 		})
 		return
 	}
+
+	audit.Emit("register", user.Email, c.ClientIP(), map[string]any{
+		"user_id": user.ID.String(), "org_id": uuidString(user.OrgID),
+	})
 
 	c.JSON(http.StatusCreated, gin.H{
 		"session_token": token,
@@ -150,6 +160,7 @@ func (h *Handlers) Logout(c *gin.Context) {
 			// 不中斷回應，token 最終仍會過期
 		}
 	}
+	audit.Emit("logout", c.GetString("session_email"), c.ClientIP(), nil)
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }
 

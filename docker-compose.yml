@@ -1166,6 +1166,9 @@ services:
     <<: [*always-restart, *hardened]
     container_name: apim-auth
     environment:
+      KAFKA_BROKERS:       kafka:9093
+      KAFKA_SASL_USERNAME: apim
+      KAFKA_SASL_PASSWORD: ${KAFKA_SASL_PASSWORD:?KAFKA_SASL_PASSWORD is required}
       MTLS_ENABLED:       ${MTLS_ENABLED:-false}
       MTLS_PORT:          "9443"
       APP_ENV:            ${NODE_ENV:-production}

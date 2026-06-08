@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/xcloudapim/auth-service/internal/audit"
 	"github.com/xcloudapim/auth-service/internal/cache"
 	"github.com/xcloudapim/auth-service/internal/config"
 	"github.com/xcloudapim/auth-service/internal/handler"
@@ -31,6 +32,10 @@ func main() {
 	if err != nil {
 		logger.Fatal("load config failed", zap.Error(err))
 	}
+
+	// ─── 稽核事件 Publisher（P3-1，best-effort）────────────────
+	audit.Init(logger)
+	defer audit.Close()
 
 	// ─── Vault Client ─────────────────────────────────────────
 	vaultCli, err := vault.NewClient(
