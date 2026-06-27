@@ -16,6 +16,7 @@ paths = [
   '''(.*?)(test|spec|seed|example)(.*?)''',   # 測試 / 種子 / 範例檔
   '''\.env\.example$''',
   '''docs/security/.*\.md$''',                # 安全文件中的範例片段
+  '''portal/src/.*docs/page\.tsx$''',         # API 文件頁的 curl 範例（佔位符非真密鑰）
   '''package-lock\.json$''',
   '''go\.sum$''',
 ]
@@ -25,6 +26,9 @@ regexes = [
   '''change_me''',
   '''local_[a-z_]*_change_me''',
   '''ci_session_secret_min_32_chars_xx''',
-  '''your-[a-z-]+-here''',
+  '''ci[_-][a-z0-9]+[_-]jwt[_-]secret[_-][a-z0-9_-]*''',  # CI 測試 JWT（含歷史 ci-validation-jwt-secret-…）
+  '''ci-validation-jwt-secret-min-32-characters''',
+  '''influx_k6_pass''',                       # k6 壓測 dev 預設密碼（現檔已改 env 引用）
+  '''your[_-][a-z_-]+[_-]here''',             # 文件範例佔位符（連字號與底線皆涵蓋）
   '''xxxxxxxx''',
 ]
