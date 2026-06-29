@@ -22,7 +22,7 @@ jobs:
     name: docker-compose validate
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Validate compose files
         env:
           # 佔位環境變數驗證語法（不啟動服務）
@@ -67,8 +67,8 @@ jobs:
           - service: policy-engine
             dir: policy-engine
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.11"
           cache: true
@@ -113,8 +113,8 @@ jobs:
           - service: notification
             dir: manager/services/notification
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm

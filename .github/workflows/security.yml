@@ -26,11 +26,11 @@ jobs:
     name: Secret Scan (gitleaks)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # 掃描完整歷史
       - name: gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -42,8 +42,8 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/checkout@v7
+      - uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, LGPL-3.0
@@ -64,8 +64,8 @@ jobs:
           - { service: subscription-service, dir: manager/services/subscription }
           - { service: policy-engine,        dir: policy-engine }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.11"
           cache: true
@@ -96,8 +96,8 @@ jobs:
           - { service: analytics,    dir: manager/services/analytics }
           - { service: notification, dir: manager/services/notification }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: npm
@@ -120,8 +120,8 @@ jobs:
       matrix:
         dir: [manager/services/auth, manager/services/registry, manager/services/subscription, policy-engine]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
         with: { go-version: "1.25.11" }
       - name: Run gosec
         uses: securego/gosec@master
@@ -137,7 +137,7 @@ jobs:
     continue-on-error: true   # 報告為主（不阻擋）
     container: { image: returntocorp/semgrep }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Run Semgrep
         # 發現項輸出到 log（供 triage），但不讓步驟失敗（報告為主）
         run: semgrep ci || true
@@ -167,13 +167,13 @@ jobs:
       matrix:
         language: [javascript-typescript, go]
     steps:
-      - uses: actions/checkout@v4
-      - uses: github/codeql-action/init@v3
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           queries: security-and-quality
-      - uses: github/codeql-action/autobuild@v3
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/autobuild@v4
+      - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
 
@@ -185,7 +185,7 @@ jobs:
     runs-on: ubuntu-24.04
     continue-on-error: true   # 報告為主（SARIF 上傳 Security tab）
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Trivy filesystem scan
         uses: aquasecurity/trivy-action@master
         with:
@@ -198,7 +198,7 @@ jobs:
           output: trivy-fs.sarif
           skip-dirs: ".cache,node_modules"
       - name: Upload to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles('trivy-fs.sarif') != ''
         with:
           sarif_file: trivy-fs.sarif
@@ -224,7 +224,7 @@ jobs:
           - { service: policy-engine,       context: policy-engine }
           - { service: portal,              context: portal }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build image
         run: docker build -t xcloudapim-${{ matrix.service }}:scan ${{ matrix.context }}
       - name: Trivy image scan
@@ -237,7 +237,7 @@ jobs:
           format: sarif
           output: trivy-${{ matrix.service }}.sarif
       - name: Upload to Security tab
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         if: always() && hashFiles(format('trivy-{0}.sarif', matrix.service)) != ''
         with:
           sarif_file: trivy-${{ matrix.service }}.sarif
@@ -251,14 +251,14 @@ jobs:
     runs-on: ubuntu-24.04
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Start stack (gateway only smoke)
         run: |
           echo "需在此啟動受測服務（gateway/bff/portal）後執行 ZAP。"
           echo "完整堆疊啟動成本高；建議指向 staging 環境的 ZAP_TARGET。"
       - name: ZAP Baseline Scan
         if: env.ZAP_TARGET != ''
-        uses: zaproxy/action-baseline@v0.12.0
+        uses: zaproxy/action-baseline@v0.15.0
         with:
           target: ${{ env.ZAP_TARGET }}
           fail_action: false   # 報告為主，High 開 issue
